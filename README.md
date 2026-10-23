@@ -141,11 +141,12 @@ flowchart LR
 | Mục đích | Công nghệ |
 |---|---|
 | Framework | FastAPI + Uvicorn, Pydantic v2 |
-| Truy cập DB | SQLAlchemy 2.0 (async) + driver PostgreSQL, kết nối qua pooler của Supabase |
+| Truy cập DB | `psycopg` 3 + `psycopg_pool`, viết SQL trực tiếp, kết nối qua **Session pooler** của Supabase |
+| Gọi Supabase từ backend | `httpx` (Auth Admin API để tạo tài khoản, PostgREST để ghi hồ sơ) |
 | Xác thực | Kiểm tra JWT của Supabase bằng JWKS (PyJWT) |
 | Giới hạn tốc độ | slowapi |
 | Gửi email (quên mật khẩu) | SMTP riêng (Resend hoặc Gmail SMTP), vì dịch vụ email mặc định của Supabase giới hạn rất thấp |
-| Đóng gói / triển khai | Docker; Render hoặc Google Cloud Run |
+| Triển khai | Render (Python 3, không dùng Docker), tự triển khai lại mỗi khi gộp code vào nhánh `develop` |
 
 ### 🗄️ Database & dịch vụ
 
@@ -312,17 +313,21 @@ Thiết kế nằm trong file Figma của nhóm (trang *01 - UI Design*, *02 - C
 ```
 lost-and-found/
 ├── mobile/          # Android app (Kotlin, Jetpack Compose)
-├── backend/         # FastAPI
-│   ├── app/
-│   │   ├── api/         # routers: auth, posts, claims, reports, admin
-│   │   ├── core/        # config, security (JWT/JWKS)
-│   │   ├── services/    # logic nghiệp vụ
-│   │   └── db/          # kết nối, truy vấn
+├── backend/         # FastAPI (xem backend/README.md)
+│   ├── .env.example     # bản mẫu biến môi trường (file .env thật KHÔNG commit)
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py          # tạo app, gắn các router
+│       ├── db.py            # nhóm kết nối database
+│       ├── core/            # config, security (kiểm tra JWT), deps (người dùng đang hoạt động)
+│       ├── routers/         # nhận request: auth, me, (posts, claims, reports, admin)
+│       ├── schemas/         # hình dạng dữ liệu và luật kiểm tra (Pydantic)
+│       └── services/        # logic nghiệp vụ
 ├── admin-web/       # React + Vite + TypeScript
 ├── supabase/
 │   ├── schema.sql       # toàn bộ database (bảng, trigger, RLS, hàm, seed)
 │   └── reset.sql        # chỉ dùng khi phát triển: xóa sạch để chạy lại schema.sql
-├── docs/            # kế hoạch 30 ngày (.docx), API contract, báo cáo
+├── docs/            # api.md (hợp đồng API), decisions.md, kế hoạch 30 ngày (.docx), báo cáo
 └── README.md
 ```
 
@@ -346,9 +351,25 @@ Mức ưu tiên:
 - **Nên có:** thông báo, Bài của tôi, khối Cần xử lý, sắp xếp Gần nhất, chỉnh sửa hồ sơ.
 - **Nếu còn thời gian:** quên / đổi mật khẩu bằng mã email, ảnh đại diện, gửi ảnh trong chat, dashboard admin.
 
+### Tình trạng hiện tại (cập nhật 23/10/2026)
+
+Backend đang chạy tại **https://lost-found-api-ph8v.onrender.com** (trang thử API: `/docs`). Gói miễn phí tự tắt sau 15 phút không có truy cập nên lần gọi đầu có thể mất 30–50 giây.
+
+| Việc | Trạng thái |
+|---|---|
+| Supabase: schema, Auth, Storage, Realtime | ✅ |
+| Backend: `/health`, `/me` (kiểm tra token JWT) | ✅ |
+| Backend: `POST /auth/register` | ✅ |
+| Triển khai backend lên Render | ✅ |
+| Tài liệu API ([`docs/api.md`](docs/api.md)) | ✅ |
+| Backend: `PUT /me/phone` | 🚧 |
+| Backend: `POST /posts` và các endpoint còn lại | 🚧 xem `docs/api.md` |
+| Android: khung ứng dụng, đăng nhập | 🚧 |
+| Admin web | 🚧 |
+
 ### Tiến độ
 
-- [ ] **M1** Nền móng và đăng nhập
+- [ ] **M1** Nền móng và đăng nhập (đang làm: phía backend đã xong phần đăng ký, đăng nhập, triển khai)
 - [ ] **M2** Đăng bài, bảng tin, xác minh
 - [ ] **M3** Chat, DONE, báo cáo
 - [ ] **M4** Admin web, hoàn thiện, phát hành
