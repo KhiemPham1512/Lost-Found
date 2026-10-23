@@ -25,6 +25,8 @@ Authorization: Bearer <access_token>
 ```
 `access_token` lấy được khi đăng nhập bằng Supabase Auth (thư viện `supabase-kt` tự giữ phiên và tự làm mới token).
 
+**Về tuổi thọ của token:** token sống **1 giờ**. Backend kiểm tra chữ ký và hạn của token chứ không hỏi lại Supabase mỗi lần, nên token đã cấp vẫn dùng được đến khi hết hạn dù người dùng đã bị xóa. Vì vậy, từ các endpoint cần quyền (từ `PUT /me/phone` trở đi), backend **tra thêm bảng `profiles`**: hồ sơ không tồn tại hoặc tài khoản bị khóa thì trả `403` ngay.
+
 **Định dạng.** JSON, mã hóa UTF-8. ID là UUID dạng chuỗi. Thời gian theo **ISO 8601 có múi giờ**, ví dụ `2026-10-23T08:30:00+07:00`.
 
 **Mã trạng thái HTTP:**
@@ -91,11 +93,12 @@ Lưu số điện thoại (không công khai, chỉ chính chủ và admin xem �
 // Request
 { "phone": "0901234567" }
 ```
-Định dạng số Việt Nam: bắt đầu bằng `0` hoặc `+84`, theo sau 9–10 chữ số.
+Định dạng số Việt Nam: bắt đầu bằng `0` hoặc `+84`, theo sau 9–10 chữ số. Server tự bỏ khoảng trắng, dấu chấm, dấu gạch ngang (`0901 234 567` được chấp nhận). Gọi lại để **đổi số** thì số cũ bị thay thế.
 ```json
 // 200 OK
 { "phone_saved": true }
 ```
+Lỗi: `422` sai định dạng · `403` tài khoản bị khóa hoặc chưa có hồ sơ · `503` backend chưa cấu hình database.
 
 ### 3.3 Bài đăng
 
