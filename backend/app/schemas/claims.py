@@ -1,4 +1,6 @@
+from typing import Literal
 from uuid import UUID
+
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,5 +29,22 @@ class ClaimCreate(BaseModel):
 
 
 class ClaimCreatedResponse(BaseModel):
+    claim_id: str
+    status: str
+
+class DecisionRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    decision: Literal["PASS", "FAIL"]
+    note: str | None = Field(default=None, max_length=500)
+
+
+class DecisionResponse(BaseModel):
+    claim_id: str
+    status: str
+    conversation_id: str | None = None
+
+
+class CancelResponse(BaseModel):
     claim_id: str
     status: str

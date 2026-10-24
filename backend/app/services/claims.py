@@ -3,7 +3,7 @@ from uuid import UUID
 import psycopg
 from fastapi import HTTPException
 
-from app.schemas.claims import ClaimCreate
+from app.schemas.claims import ClaimCreate, DecisionRequest
 
 MAX_ATTEMPTS = 2  # số lần bị Fail hoặc tự hủy tối đa trên một bài
 
@@ -84,3 +84,51 @@ def submit_claim(conn: psycopg.Connection, user_id: str, post_id: UUID, body: Cl
         raise HTTPException(status_code=409, detail="Không thể gửi yêu cầu cho bài này")
 
     return {"claim_id": str(claim_id), "status": "SUBMITTED"}
+
+def _load_claim_for_update(conn: psycopg.Connection, claim_id: UUID) -> tuple:
+    """Lấy claim và KHÓA dòng đó đến hết transaction, để hai người không xử lý cùng lúc."""
+    row = conn.execute(
+        "select post_id, post_author_id, claimant_id, status "
+        "from public.claims where id = %s for update",
+        (claim_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy yêu cầu xác minh")
+    return row
+
+
+def decide_claim(conn: psycopg.Connection, user_id: str, claim_id: UUID, body: DecisionRequest) -> dict:
+    post_id, author_id, _claimant_id, status = _load_claim_for_update(conn, claim_id)
+    if str(author_id) != user_id:
+        raise HTTPException(status_code=403, detail="Chỉ chủ bài mới được quyết định")
+    if status != "SUBMITTED":
+        raise HTTPException(status_code=409, detail="Yêu cầu này đã được xử lý")
+    (post_status,) = conn.execute(
+        "select status from public.posts where id = %s", (post_id,)
+    ).fetchone()
+    if post_status != "ACTIVE":
+        raise HTTPException(status_code=409, detail="Bài đăng không còn hoạt động")
+
+    new_status = "PASSED" if body.decision == "PASS" else "FAILED"
+    # Trigger trong database lo phần còn lại: PASS thì tự tạo cuộc trò chuyện, tin nhắn hệ thống và thông báo
+    conn.execute(
+        "update public.claims set status = %s, decision_note = %s where id = %s",
+        (new_status, body.note or None, claim_id),
+    )
+    conversation_id = None
+    if new_status == "PASSED":
+        row = conn.execute(
+            "select id from public.conversations where claim_id = %s", (claim_id,)
+        ).fetchone()
+        conversation_id = str(row[0]) if row else None
+    return {"claim_id": str(claim_id), "status": new_status, "conversation_id": conversation_id}
+
+
+def cancel_claim(conn: psycopg.Connection, user_id: str, claim_id: UUID) -> dict:
+    _post_id, _author_id, claimant_id, status = _load_claim_for_update(conn, claim_id)
+    if str(claimant_id) != user_id:
+        raise HTTPException(status_code=403, detail="Chỉ người gửi yêu cầu mới được hủy")
+    if status not in ("SUBMITTED", "PASSED"):
+        raise HTTPException(status_code=409, detail="Yêu cầu này không thể hủy")
+    conn.execute("update public.claims set status = 'CANCELLED' where id = %s", (claim_id,))
+    return {"claim_id": str(claim_id), "status": "CANCELLED"}

@@ -5,8 +5,15 @@ from fastapi import APIRouter, Depends
 
 from app.core.deps import get_active_user_id
 from app.db import get_conn
-from app.schemas.claims import ClaimCreate, ClaimCreatedResponse, QuestionsResponse
-from app.services.claims import get_questions, submit_claim
+from app.schemas.claims import (
+    CancelResponse,
+    ClaimCreate,
+    ClaimCreatedResponse,
+    DecisionRequest,
+    DecisionResponse,
+    QuestionsResponse,
+)
+from app.services.claims import cancel_claim, decide_claim, get_questions, submit_claim
 
 router = APIRouter(tags=["claims"])
 
@@ -28,3 +35,21 @@ def create_claim(
     conn: psycopg.Connection = Depends(get_conn),
 ):
     return submit_claim(conn, user_id, post_id, body)
+
+@router.post("/claims/{claim_id}/decision", response_model=DecisionResponse)
+def decision(
+    claim_id: UUID,
+    body: DecisionRequest,
+    user_id: str = Depends(get_active_user_id),
+    conn: psycopg.Connection = Depends(get_conn),
+):
+    return decide_claim(conn, user_id, claim_id, body)
+
+
+@router.post("/claims/{claim_id}/cancel", response_model=CancelResponse)
+def cancel(
+    claim_id: UUID,
+    user_id: str = Depends(get_active_user_id),
+    conn: psycopg.Connection = Depends(get_conn),
+):
+    return cancel_claim(conn, user_id, claim_id)
