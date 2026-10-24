@@ -138,7 +138,13 @@ Tạo bài Lost hoặc Found. **App upload ảnh lên Supabase Storage trước*
 // 201 Created
 { "id": "9b1d...", "status": "ACTIVE", "expires_at": "2026-11-22T08:30:00+00:00" }
 ```
-Lỗi: `400` đường dẫn ảnh không thuộc về bạn · `422` sai luật ở bảng trên.
+Quy tắc thêm:
+- `image_paths`: mỗi đường dẫn phải đúng dạng `<id-của-bạn>/<tên>.jpg` (đuôi `jpg`, `jpeg`, `png` hoặc `webp`), **không trùng nhau**, và ảnh phải **đã được tải lên Storage trước đó**. Server kiểm tra từng ảnh có thật trong bucket.
+- `event_time` phải có múi giờ và không ở tương lai (cho phép lệch 5 phút).
+- Mỗi người **tối đa 10 bài trong 24 giờ**.
+- Bài được tạo trong **một transaction**: có lỗi ở bất kỳ bước nào thì không có gì được lưu.
+
+Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh chưa được tải lên · `422` sai luật ở bảng trên, hoặc `category_id` không tồn tại · `429` đăng quá 10 bài trong 24 giờ · `403` tài khoản bị khóa hoặc chưa có hồ sơ.
 
 #### `PATCH /posts/{post_id}/status` 🚧 (ngày 6)
 Chủ bài ẩn, hiện lại hoặc xóa bài của mình.
