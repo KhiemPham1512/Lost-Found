@@ -362,8 +362,10 @@ Backend đang chạy tại **https://lost-found-api-ph8v.onrender.com** (trang t
 | Backend: `POST /auth/register` | ✅ |
 | Triển khai backend lên Render | ✅ |
 | Tài liệu API ([`docs/api.md`](docs/api.md)) | ✅ |
-| Backend: `PUT /me/phone` | 🚧 |
-| Backend: `POST /posts` và các endpoint còn lại | 🚧 xem `docs/api.md` |
+| Backend: `PUT /me/phone` | ✅ |
+| Backend: `POST /posts` (tạo bài trong một transaction) | ✅ |
+| Backend: `GET /posts/{id}/questions`, `POST /posts/{id}/claims` (xác minh) | ✅ |
+| Backend: `decision`, `cancel`, `confirm`, báo cáo, admin | 🚧 xem `docs/api.md` |
 | Android: khung ứng dụng, đăng nhập | 🚧 |
 | Admin web | 🚧 |
 
