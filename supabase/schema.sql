@@ -707,9 +707,10 @@ insert into storage.buckets (id, name, public)
 values ('post-images', 'post-images', true)
 on conflict (id) do nothing;
 
+-- Bucket public: ảnh xem được qua địa chỉ công khai mà KHÔNG cần policy SELECT.
+-- Cố ý không tạo policy SELECT, để client không liệt kê được toàn bộ file trong bucket.
+-- (Nếu trước đó đã có policy này: drop policy if exists "post-images: read" on storage.objects;)
 drop policy if exists "post-images: read" on storage.objects;
-create policy "post-images: read" on storage.objects
-  for select using (bucket_id = 'post-images');
 
 drop policy if exists "post-images: upload to own folder" on storage.objects;
 create policy "post-images: upload to own folder" on storage.objects

@@ -87,7 +87,7 @@ Lỗi: `409` email đã đăng ký · `400` mật khẩu quá yếu · `422` d�
 
 Sau khi đăng ký thành công, app **tự đăng nhập** bằng email + mật khẩu qua Supabase Auth.
 
-#### `PUT /me/phone` 🚧 (ngày 5)
+#### `PUT /me/phone` ✅
 Lưu số điện thoại (không công khai, chỉ chính chủ và admin xem được).
 ```json
 // Request
@@ -102,7 +102,7 @@ Lỗi: `422` sai định dạng · `403` tài khoản bị khóa hoặc chưa c�
 
 ### 3.3 Bài đăng
 
-#### `POST /posts` 🚧 (ngày 5–6)
+#### `POST /posts` ✅
 Tạo bài Lost hoặc Found. **App upload ảnh lên Supabase Storage trước** (phần 4.5), rồi gửi danh sách đường dẫn ảnh tại đây.
 ```json
 // Request
@@ -168,7 +168,7 @@ Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện t�
 > Người **đăng bài** luôn là người đặt câu hỏi và chấm Pass/Fail. Người còn lại (gọi là *claimant*) là người trả lời.
 > Bài **Found**: claimant là người nhận mình là chủ đồ. Bài **Lost**: claimant là người nói đã nhặt được đồ.
 
-#### `GET /posts/{post_id}/questions` 🚧 (ngày 8)
+#### `GET /posts/{post_id}/questions` ✅
 Claimant lấy câu hỏi để trả lời. **Câu hỏi không đọc trực tiếp từ database** để backend đếm được số lần thử.
 ```json
 // 200 OK
@@ -181,9 +181,9 @@ Claimant lấy câu hỏi để trả lời. **Câu hỏi không đọc trực t
   "attempts_left": 2
 }
 ```
-Lỗi: `403` đây là bài của bạn · `404` · `409` bài không còn hoạt động · `429` hết lượt hoặc gọi quá nhiều.
+Lỗi: `403` đây là bài của bạn · `404` không có bài · `409` bài không còn hoạt động, hoặc bạn đã có yêu cầu đang xử lý · `429` đã hết lượt.
 
-#### `POST /posts/{post_id}/claims` 🚧 (ngày 8)
+#### `POST /posts/{post_id}/claims` ✅
 Nộp câu trả lời. **Phải trả lời đủ mọi câu hỏi.**
 ```json
 // Request
@@ -199,8 +199,8 @@ Nộp câu trả lời. **Phải trả lời đủ mọi câu hỏi.**
 // 201 Created
 { "claim_id": "c1...", "status": "SUBMITTED" }
 ```
-Quy tắc: mỗi người chỉ có **1 yêu cầu đang chờ** trên mỗi bài; **tối đa 2 lần bị Fail** trên cùng một bài.
-Lỗi: `403` bài của chính bạn · `409` bạn đã có yêu cầu đang chờ, hoặc bài không còn hoạt động · `429` hết lượt · `422` thiếu câu trả lời.
+Quy tắc: mỗi người chỉ có **1 yêu cầu đang xử lý** trên mỗi bài; **tối đa 2 lượt** trên cùng một bài (mỗi lần bị Fail hoặc tự hủy tính là 1 lượt). Phải trả lời **đúng và đủ** mọi câu hỏi: không thiếu, không thừa, không trùng.
+Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đã có yêu cầu đang xử lý, hoặc bài không còn hoạt động · `429` hết lượt · `422` thiếu, thừa hoặc trùng câu trả lời, hay câu trả lời rỗng.
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
@@ -215,15 +215,18 @@ Hệ thống **tự gửi thông báo** cho chủ bài.
 // 200 OK
 { "claim_id": "c1...", "status": "PASSED", "conversation_id": "d1..." }
 ```
-Khi `FAIL` thì `status` là `FAILED` và `conversation_id` là `null`.
+Khi `FAIL` thì `status` là `FAILED`, `conversation_id` là `null`, và claimant nhận thông báo. Lượt thử của claimant giảm 1.
 Khi `PASS`, **database tự tạo cuộc trò chuyện** kèm một tin nhắn hệ thống, và tự gửi thông báo cho claimant.
+Lỗi: `403` bạn không phải chủ bài · `404` không có yêu cầu này · `409` yêu cầu đã được xử lý rồi, hoặc bài không còn hoạt động · `422` `decision` không phải `PASS` hoặc `FAIL`.
 
 #### `POST /claims/{claim_id}/cancel` 🚧 (ngày 9)
-Claimant hủy yêu cầu của mình (khi `SUBMITTED` hoặc `PASSED`).
+Claimant hủy yêu cầu của mình (khi `SUBMITTED` hoặc `PASSED`). Không cần body.
 ```json
 // 200 OK
 { "claim_id": "c1...", "status": "CANCELLED" }
 ```
+Nếu yêu cầu đã `PASSED` thì cuộc trò chuyện bị **khóa** (chỉ còn đọc). Lần hủy **tính là 1 lượt thử** của claimant trên bài đó.
+Lỗi: `403` bạn không phải người gửi yêu cầu · `404` · `409` yêu cầu đã kết thúc (`FAILED`, `CANCELLED`, `COMPLETED`, `CLOSED`).
 
 ### 3.5 Trao trả và DONE
 

@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI
 from app.core.config import settings  # noqa: F401  (thiếu cấu hình thì báo lỗi ngay)
 from app.core.security import get_current_user_id
 from app.db import close_pool, open_pool
-from app.routers import auth, me, posts
+from app.routers import auth, claims, me, posts
 
 
 @asynccontextmanager
@@ -19,7 +19,7 @@ app = FastAPI(title="Lost & Found API", lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(posts.router)
-
+app.include_router(claims.router)
 
 @app.get("/health")
 def health():
