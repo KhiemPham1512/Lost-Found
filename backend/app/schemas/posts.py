@@ -18,7 +18,7 @@ class PostCreate(BaseModel):
     event_time: datetime
     tags: list[str] = Field(default_factory=list, max_length=10)
     image_paths: list[str] = Field(default_factory=list, max_length=5)
-    questions: list[str] = Field(min_length=1, max_length=3)
+    questions: list[str] = Field(default_factory=list, max_length=3)
 
     @field_validator("event_time")
     @classmethod
@@ -50,9 +50,11 @@ class PostCreate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def coords_together(self):
+    def check_whole_post(self):
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("latitude và longitude phải cùng có hoặc cùng không có")
+        if self.type == "FOUND" and not self.questions:
+            raise ValueError("Bài Found phải có ít nhất 1 câu hỏi xác minh")
         return self
 
 

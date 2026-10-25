@@ -6,7 +6,7 @@ Khi ai đó hỏi "sao lại làm vậy?" thì mở file này. Các dòng dướ
 |---|---|---|---|
 | 1 | Đăng nhập bằng **email + mật khẩu** | Figma dùng email; Supabase Auth hỗ trợ sẵn | ☐ |
 | 2 | `username` là **handle công khai tự sinh** từ email, không công khai email | Bảo vệ quyền riêng tư | ☐ |
-| 3 | **Cả bài Lost và Found** đều có 1–3 câu hỏi xác minh | Figma mới có câu hỏi ở bài Found, nhưng bài Lost cũng cần cơ chế tương tự | ☐ |
+| 3 | **Bài Found bắt buộc 1–3 câu hỏi xác minh; bài Lost tùy chọn 0–3 câu**. Chủ bài **luôn** phải duyệt trước khi mở chat | Bài Lost không bắt người đang mất đồ phải nghĩ câu hỏi, nhưng không ai nhắn thẳng được cho họ. Nhóm đã chọn phương án này (24/10/2026) | ✅ |
 | 4 | **Người đăng bài** luôn là người đặt câu hỏi và chấm Pass/Fail | Một luồng dùng chung cho cả Lost và Found | ☐ |
 | 5 | Mỗi người **tối đa 2 lượt** trên một bài (bị Fail hoặc tự hủy đều tính là 1 lượt) | Chống dò đáp án, chống gửi yêu cầu liên tục | ☐ |
 | 6 | Bài tự **hết hạn sau 30 ngày** | Theo đề bài | ☐ |

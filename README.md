@@ -299,7 +299,7 @@ Thiết kế nằm trong file Figma của nhóm (trang *01 - UI Design*, *02 - C
 | Khởi động & tài khoản | Splash, Đăng nhập, Đăng ký, Quên mật khẩu → Nhập mã → Đặt lại mật khẩu |
 | Trang chủ | Lời chào, chuông thông báo, khối **Cần xử lý** (3 bộ đếm), tìm kiếm, sắp xếp Mới nhất / Gần nhất, tab Tất cả / Lost / Found, thẻ bài đăng |
 | Tìm kiếm | Từ khóa, loại bài, danh mục, thời gian đăng, danh sách kết quả, trạng thái không có kết quả |
-| Đăng bài | Lost / Found, tối đa 5 ảnh, tiêu đề, danh mục, tag, địa điểm, thời gian, mô tả, câu hỏi xác minh (bài Found) |
+| Đăng bài | Lost / Found, tối đa 5 ảnh, tiêu đề, danh mục, tag, địa điểm, thời gian, mô tả, câu hỏi xác minh (bắt buộc với bài Found, tùy chọn với bài Lost) |
 | Xác minh | Người nhận trả lời câu hỏi; người đăng duyệt danh sách yêu cầu → Từ chối / Cho phép nhắn tin |
 | Nhắn tin & trao trả | Danh sách hội thoại, màn hình chat, bước **Xác nhận trao trả** với thanh tiến trình Xác minh → Chat → Trao trả → Hoàn tất |
 | Bài của tôi | Đang đăng, Đã DONE, Đã ẩn (hiện lại, xóa, xem lý do bị gỡ) |

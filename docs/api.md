@@ -132,7 +132,7 @@ Tạo bài Lost hoặc Found. **App upload ảnh lên Supabase Storage trước*
 | `event_time` | thời điểm mất hoặc nhặt, không ở tương lai |
 | `tags` | tối đa 10 tag, mỗi tag tối đa 30 ký tự. Server tự viết thường và cắt khoảng trắng |
 | `image_paths` | 0–5 đường dẫn. **Mỗi đường dẫn phải bắt đầu bằng ID của chính bạn** |
-| `questions` | **1–3 câu**, mỗi câu 3–300 ký tự. Bắt buộc cho cả bài Lost và Found |
+| `questions` | Mỗi câu 3–300 ký tự. **Bài `FOUND`: bắt buộc 1–3 câu. Bài `LOST`: tùy chọn, 0–3 câu** (không có câu hỏi vẫn đăng được; chủ bài vẫn phải duyệt trước khi mở chat) |
 
 ```json
 // 201 Created
@@ -144,7 +144,7 @@ Quy tắc thêm:
 - Mỗi người **tối đa 10 bài trong 24 giờ**.
 - Bài được tạo trong **một transaction**: có lỗi ở bất kỳ bước nào thì không có gì được lưu.
 
-Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh chưa được tải lên · `422` sai luật ở bảng trên, hoặc `category_id` không tồn tại · `429` đăng quá 10 bài trong 24 giờ · `403` tài khoản bị khóa hoặc chưa có hồ sơ.
+Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh chưa được tải lên · `422` sai luật ở bảng trên (kể cả bài `FOUND` không có câu hỏi), hoặc `category_id` không tồn tại · `429` đăng quá 10 bài trong 24 giờ · `403` tài khoản bị khóa hoặc chưa có hồ sơ.
 
 #### `PATCH /posts/{post_id}/status` 🚧 (ngày 6)
 Chủ bài ẩn, hiện lại hoặc xóa bài của mình.
@@ -181,10 +181,11 @@ Claimant lấy câu hỏi để trả lời. **Câu hỏi không đọc trực t
   "attempts_left": 2
 }
 ```
+Nếu bài **không có câu hỏi** (bài `LOST` tùy chọn), `questions` là danh sách rỗng `[]`. Khi đó app **không hiện màn trả lời** mà hiện màn "Gửi yêu cầu liên hệ".
 Lỗi: `403` đây là bài của bạn · `404` không có bài · `409` bài không còn hoạt động, hoặc bạn đã có yêu cầu đang xử lý · `429` đã hết lượt.
 
 #### `POST /posts/{post_id}/claims` ✅
-Nộp câu trả lời. **Phải trả lời đủ mọi câu hỏi.**
+Nộp câu trả lời. **Phải trả lời đủ mọi câu hỏi của bài.** Bài không có câu hỏi thì gửi `{"answers": []}`: chỉ là yêu cầu liên hệ, vẫn tạo claim `SUBMITTED` và chờ chủ bài duyệt.
 ```json
 // Request
 {
