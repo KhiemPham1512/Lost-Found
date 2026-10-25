@@ -132,3 +132,36 @@ def cancel_claim(conn: psycopg.Connection, user_id: str, claim_id: UUID) -> dict
         raise HTTPException(status_code=409, detail="Yêu cầu này không thể hủy")
     conn.execute("update public.claims set status = 'CANCELLED' where id = %s", (claim_id,))
     return {"claim_id": str(claim_id), "status": "CANCELLED"}
+
+def confirm_handover(conn: psycopg.Connection, user_id: str, claim_id: UUID) -> dict:
+    """Mỗi bên xác nhận phần của mình. Khi đủ cả hai, trigger trong database tự chuyển sang DONE."""
+    post_id, author_id, claimant_id, status = _load_claim_for_update(conn, claim_id)
+    is_author = str(author_id) == user_id
+    if not is_author and str(claimant_id) != user_id:
+        raise HTTPException(status_code=403, detail="Bạn không tham gia yêu cầu này")
+
+    if status == "PASSED":
+        (post_status,) = conn.execute(
+            "select status from public.posts where id = %s", (post_id,)
+        ).fetchone()
+        if post_status != "ACTIVE":
+            raise HTTPException(status_code=409, detail="Bài đăng không còn hoạt động")
+        column = "author_confirmed_at" if is_author else "claimant_confirmed_at"
+        # coalesce: đã xác nhận rồi thì giữ nguyên thời điểm cũ (gọi nhiều lần không gây lỗi)
+        conn.execute(
+            f"update public.claims set {column} = coalesce({column}, now()) where id = %s",
+            (claim_id,),
+        )
+    elif status != "COMPLETED":
+        raise HTTPException(status_code=409, detail="Yêu cầu này chưa ở bước trao trả")
+
+    new_status, author_at, claimant_at = conn.execute(
+        "select status, author_confirmed_at, claimant_confirmed_at from public.claims where id = %s",
+        (claim_id,),
+    ).fetchone()
+    return {
+        "claim_id": str(claim_id),
+        "status": new_status,
+        "author_confirmed_at": author_at,
+        "claimant_confirmed_at": claimant_at,
+    }

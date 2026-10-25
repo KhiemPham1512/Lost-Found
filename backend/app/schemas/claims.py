@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -48,3 +49,9 @@ class DecisionResponse(BaseModel):
 class CancelResponse(BaseModel):
     claim_id: str
     status: str
+
+class ConfirmResponse(BaseModel):
+    claim_id: str
+    status: str
+    author_confirmed_at: datetime | None = None
+    claimant_confirmed_at: datetime | None = None

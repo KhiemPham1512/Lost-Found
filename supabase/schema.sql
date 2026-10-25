@@ -46,7 +46,8 @@ create type public.notification_type as enum (
 );
 create type public.admin_action_type as enum (
   'REMOVE_POST', 'RESTORE_POST', 'BAN_USER', 'UNBAN_USER',
-  'RESOLVE_REPORT', 'DISMISS_REPORT', 'VIEW_CONVERSATION'
+  'RESOLVE_REPORT', 'DISMISS_REPORT', 'VIEW_CONVERSATION',
+  'REVIEW_REPORT', 'LOCK_CONVERSATION'
 );
 
 -- ---------------------------------------------------------------------
@@ -213,6 +214,7 @@ create table public.messages (
 -- ---------------------------------------------------------------------
 create table public.reports (
   id                     uuid primary key default gen_random_uuid(),
+  report_no              bigint generated always as identity (start with 1001) unique,  -- mã dễ đọc: R-1001, R-1002...
   reporter_id            uuid not null references public.profiles (id) on delete cascade,
   target_post_id         uuid references public.posts (id)         on delete cascade,
   target_user_id         uuid references public.profiles (id)      on delete cascade,
@@ -410,6 +412,18 @@ begin
 
   if new.status = old.status then
     return new;
+  end if;
+
+  -- Thông báo "cần hành động" mà hết cần thiết thì đánh dấu ĐÃ ĐỌC (vẫn giữ lại làm lịch sử, không xóa)
+  if old.status = 'SUBMITTED' then
+    update public.notifications
+       set read_at = coalesce(read_at, now())
+     where claim_id = new.id and type = 'CLAIM_RECEIVED';
+  end if;
+  if new.status in ('COMPLETED', 'CANCELLED', 'CLOSED') then
+    update public.notifications
+       set read_at = coalesce(read_at, now())
+     where claim_id = new.id and type = 'HANDOVER_WAITING';
   end if;
 
   if new.status = 'PASSED' then

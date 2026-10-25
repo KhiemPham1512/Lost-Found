@@ -9,11 +9,18 @@ from app.schemas.claims import (
     CancelResponse,
     ClaimCreate,
     ClaimCreatedResponse,
+    ConfirmResponse,
     DecisionRequest,
     DecisionResponse,
     QuestionsResponse,
 )
-from app.services.claims import cancel_claim, decide_claim, get_questions, submit_claim
+from app.services.claims import (
+    cancel_claim,
+    confirm_handover,
+    decide_claim,
+    get_questions,
+    submit_claim,
+)
 
 router = APIRouter(tags=["claims"])
 
@@ -53,3 +60,11 @@ def cancel(
     conn: psycopg.Connection = Depends(get_conn),
 ):
     return cancel_claim(conn, user_id, claim_id)
+
+@router.post("/claims/{claim_id}/confirm", response_model=ConfirmResponse)
+def confirm(
+    claim_id: UUID,
+    user_id: str = Depends(get_active_user_id),
+    conn: psycopg.Connection = Depends(get_conn),
+):
+    return confirm_handover(conn, user_id, claim_id)

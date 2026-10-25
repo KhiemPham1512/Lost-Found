@@ -365,7 +365,9 @@ Backend đang chạy tại **https://lost-found-api-ph8v.onrender.com** (trang t
 | Backend: `PUT /me/phone` | ✅ |
 | Backend: `POST /posts` (tạo bài trong một transaction) | ✅ |
 | Backend: `GET /posts/{id}/questions`, `POST /posts/{id}/claims` (xác minh) | ✅ |
-| Backend: `decision`, `cancel`, `confirm`, báo cáo, admin | 🚧 xem `docs/api.md` |
+| Backend: `decision`, `cancel` (duyệt và hủy yêu cầu xác minh) | ✅ |
+| Backend: `confirm` (trao trả, DONE), báo cáo, admin | 🚧 xem `docs/api.md` |
+| Thiết kế Figma: 20 màn mobile + 9 màn Admin web | ✅ (còn thiếu một số màn, xem nhận xét) |
 | Android: khung ứng dụng, đăng nhập | 🚧 |
 | Admin web | 🚧 |
 
