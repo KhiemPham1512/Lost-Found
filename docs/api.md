@@ -204,7 +204,7 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
-#### `POST /claims/{claim_id}/decision` 🚧 (ngày 9)
+#### `POST /claims/{claim_id}/decision` ✅
 **Chỉ chủ bài** được gọi. Yêu cầu phải đang ở trạng thái `SUBMITTED`.
 ```json
 // Request
@@ -219,7 +219,7 @@ Khi `FAIL` thì `status` là `FAILED`, `conversation_id` là `null`, và claiman
 Khi `PASS`, **database tự tạo cuộc trò chuyện** kèm một tin nhắn hệ thống, và tự gửi thông báo cho claimant.
 Lỗi: `403` bạn không phải chủ bài · `404` không có yêu cầu này · `409` yêu cầu đã được xử lý rồi, hoặc bài không còn hoạt động · `422` `decision` không phải `PASS` hoặc `FAIL`.
 
-#### `POST /claims/{claim_id}/cancel` 🚧 (ngày 9)
+#### `POST /claims/{claim_id}/cancel` ✅
 Claimant hủy yêu cầu của mình (khi `SUBMITTED` hoặc `PASSED`). Không cần body.
 ```json
 // 200 OK
@@ -241,7 +241,8 @@ Mỗi bên bấm xác nhận của mình. Không cần body. Backend tự biết
   "claimant_confirmed_at": null
 }
 ```
-Khi **cả hai bên đã xác nhận**, `status` trả về là `COMPLETED`. Lúc đó database tự: chuyển bài sang `RESOLVED`, đóng các yêu cầu khác của bài, khóa cuộc trò chuyện, và gửi thông báo cho cả hai.
+Khi **cả hai bên đã xác nhận**, `status` trả về là `COMPLETED`. Lúc đó database tự: chuyển bài sang `RESOLVED`, đóng các yêu cầu khác của bài, khóa cuộc trò chuyện, và gửi thông báo cho cả hai. Gọi lại sau khi đã `COMPLETED` vẫn trả `200` với trạng thái hiện tại.
+Lỗi: `403` bạn không thuộc yêu cầu này · `404` · `409` yêu cầu chưa ở bước trao trả (còn `SUBMITTED`) hoặc đã kết thúc (`FAILED`, `CANCELLED`, `CLOSED`), hoặc bài không còn hoạt động.
 
 ### 3.6 Báo cáo
 
@@ -263,22 +264,47 @@ Khi **cả hai bên đã xác nhận**, `status` trả về là `COMPLETED`. Lú
 
 ```json
 // 201 Created
-{ "report_id": "r1...", "status": "PENDING" }
+{ "report_id": "r1...", "code": "R-1042", "status": "PENDING" }
 ```
-Lỗi: `400` báo cáo chính mình, hoặc báo cáo cuộc trò chuyện mà bạn không tham gia · `404` · `409` bạn đã có báo cáo đang chờ về đối tượng này · `429`.
+`code` là mã dễ đọc để hiển thị cho người dùng và admin.
+
+Quy tắc:
+- Không báo cáo **bài của chính mình** hoặc **chính mình**.
+- Báo cáo `CONVERSATION` chỉ làm được với cuộc trò chuyện **bạn là một trong hai người**.
+- Báo cáo mới về cùng đối tượng bị từ chối khi báo cáo cũ của bạn còn `PENDING` hoặc `REVIEWING`.
+- Mỗi người **tối đa 10 báo cáo trong 24 giờ**.
+
+Lỗi: `400` báo cáo chính mình hoặc bài của chính mình · `404` không tìm thấy đối tượng (hoặc cuộc trò chuyện không thuộc bạn) · `409` đã có báo cáo đang chờ về đối tượng này · `422` `reason` hoặc `target_type` không hợp lệ · `429` quá 10 báo cáo trong 24 giờ.
 
 ### 3.7 Quản trị (chỉ tài khoản `ADMIN`, dùng bởi Admin web)
 
-Người không phải admin gọi các endpoint này nhận `403`. Mọi hành động đều được **ghi vào nhật ký** `admin_actions`.
+Người không phải admin gọi các endpoint này nhận `403`. **Mọi hành động thay đổi đều được ghi vào nhật ký** `admin_actions`. Danh sách bên dưới bám theo 9 màn hình admin trong Figma (cập nhật 24/10/2026).
 
-| Endpoint | Body | Mô tả | Trạng thái |
+**Đọc dữ liệu (cần tính toán gộp nên đi qua backend):**
+
+| Endpoint | Màn Figma | Trả về | Trạng thái |
 |---|---|---|---|
-| `POST /admin/reports/{id}/resolve` | `{"action": "...", "note": "..."}` | Xử lý báo cáo. `action`: `REMOVE_POST` (gỡ bài), `BAN_USER` (khóa tài khoản), `KEEP` (đã xử lý, giữ nguyên), `DISMISS` (không vi phạm) | 🚧 ngày 12 |
-| `POST /admin/posts/{id}/remove` | `{"reason": "..."}` | Gỡ bài, đóng các yêu cầu đang mở, thông báo cho chủ bài | 🚧 ngày 11 |
-| `POST /admin/posts/{id}/restore` | không | Khôi phục bài đã gỡ | 🚧 ngày 11 |
-| `POST /admin/users/{id}/ban` | `{"reason": "..."}` | Khóa tài khoản, chặn đăng nhập | 🚧 ngày 12 |
-| `POST /admin/users/{id}/unban` | không | Mở khóa | 🚧 ngày 12 |
-| `GET /admin/conversations/{id}/messages?limit=100&before_id=` | không | Xem tin nhắn của cuộc chat **bị báo cáo**. Luôn ghi log `VIEW_CONVERSATION` | 🚧 ngày 15 |
+| `GET /admin/stats` | Tổng quan | Số báo cáo chờ xử lý (và chênh so với hôm qua), số bài đang hiển thị (tách Lost, Found), số người dùng (và số mới trong tuần), số bài DONE trong tuần và tỷ lệ trao trả, số bài mỗi ngày trong 7 ngày (Lost, Found), 5 báo cáo mới nhất | 🚧 |
+| `GET /admin/reports?status=&type=&q=&limit=&offset=` | Báo cáo | Danh sách: mã `R-<report_no>`, loại (bài, tài khoản, hội thoại), đối tượng, lý do, handle người báo cáo, thời gian, trạng thái. `status`: `PENDING`, `REVIEWING`, `RESOLVED`, `DISMISSED` | 🚧 |
+| `GET /admin/reports/{id}` | Chi tiết báo cáo | Báo cáo, bài hoặc tài khoản bị báo cáo (kèm số bài và số lần bị báo cáo của người đăng), **mọi báo cáo khác về cùng đối tượng**, tóm tắt hội thoại liên quan (số tin, tin cuối), nhật ký xử lý | 🚧 |
+| `GET /admin/posts?type=&status=&q=&limit=&offset=` | Bài đăng | Danh sách kèm **số báo cáo** của từng bài | 🚧 |
+| `GET /admin/users?status=&q=&limit=&offset=` | Người dùng | Handle, **số điện thoại đã che** (`09•• ••• 321`), vai trò, tháng tham gia, số bài, số lần bị báo cáo, trạng thái. `status`: `ACTIVE`, `BANNED`, `REPORTED` (bị báo cáo nhiều) | 🚧 |
+| `GET /admin/actions?target_type=&range=&q=` | Nhật ký hoạt động | Thời gian, admin, hành động, đối tượng, mã báo cáo, ghi chú. `range`: `today`, `7d`, `30d` | 🚧 |
+| `GET /admin/conversations/{id}/messages?limit=100&before_id=` | Hội thoại bị báo cáo | Tin nhắn của cuộc chat **bị báo cáo**. Mỗi lần gọi **luôn ghi log** `VIEW_CONVERSATION` | 🚧 |
+
+Số điện thoại **đầy đủ không bao giờ được trả về** cho admin web; backend chỉ gửi bản đã che.
+
+**Thay đổi (đều ghi nhật ký):**
+
+| Endpoint | Body | Tác dụng | Trạng thái |
+|---|---|---|---|
+| `POST /admin/reports/{id}/review` | không | Đánh dấu báo cáo **đang xem xét** (`REVIEWING`). Log `REVIEW_REPORT` | 🚧 |
+| `POST /admin/reports/{id}/resolve` | `{"action": "...", "note": "..."}` | Xử lý báo cáo. `action`: `REMOVE_POST` (gỡ bài), `BAN_USER` (khóa tài khoản người bị báo cáo), `KEEP` (đã xử lý, giữ nguyên), `DISMISS` (không vi phạm, trạng thái `DISMISSED`). **`note` bắt buộc**. Người báo cáo nhận thông báo `REPORT_UPDATED` | 🚧 |
+| `POST /admin/posts/{id}/remove` | `{"reason": "..."}` | Gỡ bài (`REMOVED`), đóng các yêu cầu đang mở, **thông báo cho chủ bài kèm lý do** (`POST_REMOVED`) | 🚧 |
+| `POST /admin/posts/{id}/restore` | không | Khôi phục bài đã gỡ | 🚧 |
+| `POST /admin/users/{id}/ban` | `{"reason": "..."}` | Khóa tài khoản: đặt `is_banned`, chặn đăng nhập, gỡ các bài đang hoạt động của họ | 🚧 |
+| `POST /admin/users/{id}/unban` | `{"reason": "..."}` | Mở khóa | 🚧 |
+| `POST /admin/conversations/{id}/lock` | `{"reason": "..."}` | Khóa hội thoại: hai bên chỉ còn đọc. Log `LOCK_CONVERSATION` | 🚧 |
 
 Ví dụ phản hồi của `GET /admin/conversations/{id}/messages`:
 ```json
@@ -366,7 +392,7 @@ Khuyến nghị: nén ảnh, cạnh dài khoảng 1280 px, JPEG chất lượng 
 | `claim.status` | `SUBMITTED`, `PASSED`, `FAILED`, `CANCELLED`, `COMPLETED`, `CLOSED` |
 | `message.type` | `TEXT`, `IMAGE`, `SYSTEM` (tin hệ thống không có `sender_id`) |
 | `report.reason` | `SPAM`, `SCAM`, `FALSE_INFO`, `MONEY_REQUEST`, `VIOLATION`, `OTHER` |
-| `report.status` | `PENDING`, `REVIEWING`, `RESOLVED`, `DISMISSED` |
+| `report.status` | `PENDING`, `REVIEWING`, `RESOLVED`, `DISMISSED` (mã hiển thị: `R-<report_no>`, ví dụ R-1042) |
 | `notification.type` | `CLAIM_RECEIVED`, `CLAIM_PASSED`, `CLAIM_FAILED`, `HANDOVER_WAITING`, `POST_DONE`, `REPORT_UPDATED`, `POST_REMOVED`, `POST_EXPIRED`, `SYSTEM` |
 
 ## 6. Luồng chính theo thứ tự gọi
