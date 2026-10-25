@@ -26,7 +26,7 @@ class AnswerIn(BaseModel):
 
 
 class ClaimCreate(BaseModel):
-    answers: list[AnswerIn] = Field(min_length=1, max_length=3)
+    answers: list[AnswerIn] = Field(default_factory=list, max_length=3)
 
 
 class ClaimCreatedResponse(BaseModel):
