@@ -28,7 +28,7 @@ begin
     where p.pronamespace = 'public'::regnamespace
       and p.proname in ('f_unaccent', 'set_updated_at', 'claims_before_insert', 'claims_before_update',
                         'claims_after_insert', 'claims_after_status_change', 'messages_after_insert',
-                        'notify', 'is_admin', 'distance_km', 'search_posts', 'my_todo_counts')
+                        'notify', 'is_admin', 'distance_km', 'search_posts', 'my_todo_counts', 'expire_posts')
   loop
     execute format('drop function if exists %s cascade', r.sig);
   end loop;

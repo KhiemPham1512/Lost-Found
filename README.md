@@ -90,11 +90,10 @@ flowchart LR
     APP -- "hành động nghiệp vụ<br/>REST + JWT" --> API
 
     WEB -- "đăng nhập" --> AUTH
-    WEB -- "đọc danh sách" --> DB
-    WEB -- "hành động admin<br/>REST + JWT" --> API
+    WEB -- "thống kê, danh sách và kiểm duyệt<br/>REST + JWT" --> API
 
     API -- "xác thực JWT (JWKS)" --> AUTH
-    API -- "SQL + transaction<br/>(secret key)" --> DB
+    API -- "SQL + transaction<br/>(kết nối server)" --> DB
     DB --- RT
 ```
 
@@ -141,11 +140,12 @@ flowchart LR
 | Mục đích | Công nghệ |
 |---|---|
 | Framework | FastAPI + Uvicorn, Pydantic v2 |
-| Truy cập DB | SQLAlchemy 2.0 (async) + driver PostgreSQL, kết nối qua pooler của Supabase |
+| Truy cập DB | `psycopg` 3 + `psycopg_pool`, viết SQL trực tiếp, kết nối qua **Session pooler** của Supabase |
+| Gọi Supabase từ backend | `httpx` (Auth Admin API để tạo tài khoản, PostgREST để ghi hồ sơ) |
 | Xác thực | Kiểm tra JWT của Supabase bằng JWKS (PyJWT) |
 | Giới hạn tốc độ | slowapi |
 | Gửi email (quên mật khẩu) | SMTP riêng (Resend hoặc Gmail SMTP), vì dịch vụ email mặc định của Supabase giới hạn rất thấp |
-| Đóng gói / triển khai | Docker; Render hoặc Google Cloud Run |
+| Triển khai | Render (Python 3, không dùng Docker), tự triển khai lại mỗi khi gộp code vào nhánh `develop` |
 
 ### 🗄️ Database & dịch vụ
 
@@ -166,15 +166,15 @@ flowchart LR
 |---|---|
 | Framework | React + Vite + TypeScript |
 | Giao diện | Tailwind CSS + shadcn/ui |
-| Gọi dữ liệu | TanStack Query + TanStack Table |
+| Gọi dữ liệu | TanStack Query; bảng dùng shadcn/ui |
 | Đăng nhập | `supabase-js` |
-| Triển khai | Vercel / Netlify / Cloudflare Pages |
+| Triển khai | Render Static Site, nhánh `develop` |
 
 ---
 
 ## 5. Thiết kế cơ sở dữ liệu
 
-Schema gồm **16 bảng**. Chạy `supabase/schema.sql` một lần trong SQL Editor của Supabase (nếu đã chạy dở, chạy `supabase/reset.sql` trước); toàn bộ (bảng, ràng buộc, trigger, hàm tìm kiếm, RLS, seed) nằm trong [`supabase/schema.sql`](supabase/schema.sql).
+Chạy [`supabase/schema.sql`](supabase/schema.sql) một lần cho project Supabase mới để tạo bảng, ràng buộc, trigger, hàm tìm kiếm, RLS và dữ liệu danh mục. Với database đang có dữ liệu, áp dụng các bản vá phù hợp theo [hướng dẫn database](supabase/README.md).
 
 ```mermaid
 erDiagram
@@ -292,13 +292,17 @@ stateDiagram-v2
 ## 7. Giao diện (thiết kế Figma)
 
 Thiết kế nằm trong file Figma của nhóm (trang *01 - UI Design*, *02 - Components*).
+Tham chiếu: [LTTBDD L-F trên Figma](https://www.figma.com/design/oq27gMLy9XfXWTeerrGQqy/LTTBDD-L-F?node-id=0-1).
+Người dùng đã tiếp nhận phần web của C (`admin-web/`); phần Android vẫn theo
+phân công riêng. Thiết kế web dùng `ui-ux-pro-max` khi có, giữ các chức năng
+trong Figma và tuân thủ hợp đồng API hiện hành.
 
 | Nhóm màn hình | Nội dung |
 |---|---|
 | Khởi động & tài khoản | Splash, Đăng nhập, Đăng ký, Quên mật khẩu → Nhập mã → Đặt lại mật khẩu |
 | Trang chủ | Lời chào, chuông thông báo, khối **Cần xử lý** (3 bộ đếm), tìm kiếm, sắp xếp Mới nhất / Gần nhất, tab Tất cả / Lost / Found, thẻ bài đăng |
 | Tìm kiếm | Từ khóa, loại bài, danh mục, thời gian đăng, danh sách kết quả, trạng thái không có kết quả |
-| Đăng bài | Lost / Found, tối đa 5 ảnh, tiêu đề, danh mục, tag, địa điểm, thời gian, mô tả, câu hỏi xác minh (bài Found) |
+| Đăng bài | Lost / Found, tối đa 5 ảnh, tiêu đề, danh mục, tag, địa điểm, thời gian, mô tả, câu hỏi xác minh (bắt buộc với bài Found, tùy chọn với bài Lost) |
 | Xác minh | Người nhận trả lời câu hỏi; người đăng duyệt danh sách yêu cầu → Từ chối / Cho phép nhắn tin |
 | Nhắn tin & trao trả | Danh sách hội thoại, màn hình chat, bước **Xác nhận trao trả** với thanh tiến trình Xác minh → Chat → Trao trả → Hoàn tất |
 | Bài của tôi | Đang đăng, Đã DONE, Đã ẩn (hiện lại, xóa, xem lý do bị gỡ) |
@@ -307,28 +311,133 @@ Thiết kế nằm trong file Figma của nhóm (trang *01 - UI Design*, *02 - C
 
 ---
 
-## 8. Cấu trúc repository
+## 8. Cấu trúc dự án khi hoàn thành
+
+Đây là cấu trúc đích của sản phẩm hoàn chỉnh, không phải danh sách tiến độ hiện tại. Chỉ mô tả mã nguồn ứng dụng, cấu hình cần thiết và tài liệu bàn giao.
 
 ```
 lost-and-found/
 ├── mobile/          # Android app (Kotlin, Jetpack Compose)
-├── backend/         # FastAPI
-│   ├── app/
-│   │   ├── api/         # routers: auth, posts, claims, reports, admin
-│   │   ├── core/        # config, security (JWT/JWKS)
-│   │   ├── services/    # logic nghiệp vụ
-│   │   └── db/          # kết nối, truy vấn
+│   └── app/src/main/
+│       ├── java/        # core, dữ liệu và các màn hình nghiệp vụ
+│       ├── res/         # tài nguyên giao diện
+│       └── AndroidManifest.xml
+├── backend/         # FastAPI (xem backend/README.md)
+│   ├── .env.example     # bản mẫu biến môi trường (file .env thật KHÔNG commit)
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py          # tạo app, gắn các router
+│       ├── db.py            # nhóm kết nối database
+│       ├── core/            # config, security (kiểm tra JWT), deps (người dùng đang hoạt động)
+│       ├── routers/         # endpoint tài khoản, bài đăng, xác minh, báo cáo, admin
+│       ├── schemas/         # hình dạng dữ liệu và luật kiểm tra (Pydantic)
+│       └── services/        # logic nghiệp vụ
 ├── admin-web/       # React + Vite + TypeScript
+│   ├── .env.example
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── src/
+│       ├── main.tsx
+│       ├── App.tsx
+│       ├── index.css
+│       ├── components/      # giao diện dùng chung
+│       ├── features/        # đăng nhập, thống kê, báo cáo và kiểm duyệt
+│       └── lib/             # kết nối API, Supabase và tiện ích
 ├── supabase/
 │   ├── schema.sql       # toàn bộ database (bảng, trigger, RLS, hàm, seed)
-│   └── reset.sql        # chỉ dùng khi phát triển: xóa sạch để chạy lại schema.sql
-├── docs/            # kế hoạch 30 ngày (.docx), API contract, báo cáo
+│   ├── patches/         # các bản vá database
+│   ├── migrations/      # cập nhật schema theo phiên bản
+│   └── install_cron.sql # lịch tự hết hạn bài
+├── docs/            # api.md (hợp đồng API), decisions.md, kế hoạch 30 ngày (.docx), báo cáo
 └── README.md
 ```
 
 ---
 
-## 9. Lộ trình 30 ngày
+## 9. Chạy backend và admin-web
+
+### Chuẩn bị
+
+- Python 3.12, Node.js 22.12 trở lên và npm.
+- Project Supabase đã khởi tạo theo [hướng dẫn database](supabase/README.md).
+- Tài khoản quản trị có `profiles.role = 'ADMIN'` và không bị khóa. Tài khoản đăng ký thông thường có vai trò người dùng; người quản lý database cấp quyền admin.
+
+Mở hai terminal PowerShell riêng từ thư mục gốc repository. Các lệnh sao chép cấu hình chỉ chạy lần đầu; những lần sau giữ nguyên file đã điền.
+
+### Terminal 1: backend
+
+Thiết lập lần đầu:
+
+```powershell
+cd backend
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Mở `backend/.env` và điền:
+
+| Biến | Giá trị |
+|---|---|
+| `SUPABASE_URL` | URL project Supabase |
+| `SUPABASE_SECRET_KEY` | Khóa secret của project, chỉ dùng ở backend |
+| `DATABASE_URL` | Chuỗi kết nối Session pooler từ mục Connect của Supabase |
+| `ALLOWED_ORIGINS` | `http://127.0.0.1:5173,http://localhost:5173` |
+
+Khởi động từ thư mục `backend/`:
+
+```powershell
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Mở [health](http://127.0.0.1:8000/health) để kiểm tra tiến trình chạy và [Swagger](http://127.0.0.1:8000/docs) để thử API. Health trả `{"status":"ok"}` nhưng không kiểm tra kết nối database. Sau khi sửa `.env`, dừng bằng `Ctrl+C` rồi khởi động lại.
+
+### Terminal 2: admin-web
+
+Thiết lập lần đầu:
+
+```powershell
+cd admin-web
+npm ci
+Copy-Item .env.example .env.local
+```
+
+Mở `admin-web/.env.local` và điền:
+
+```dotenv
+VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_REPLACE_ME
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Hai ứng dụng phải dùng cùng project Supabase. Frontend chỉ dùng khóa publishable; không đưa khóa secret hoặc chuỗi kết nối database vào biến `VITE_*`.
+
+Khởi động từ thư mục `admin-web/`:
+
+```powershell
+npm run dev -- --port 5173 --strictPort
+```
+
+Mở [admin-web](http://127.0.0.1:5173) và đăng nhập bằng tài khoản quản trị. Sau khi sửa `.env.local`, khởi động lại Vite. Nếu gặp lỗi CORS, kiểm tra địa chỉ đang mở có trong `ALLOWED_ORIGINS` rồi khởi động lại backend.
+
+Tạo bản frontend để triển khai:
+
+```powershell
+npm run build
+```
+
+Kết quả nằm trong `admin-web/dist/`. Trước khi build cho môi trường triển khai, đặt `VITE_API_BASE_URL` thành URL backend và thêm domain admin-web vào `ALLOWED_ORIGINS` của backend. Các biến `VITE_*` được đóng gói khi build.
+
+Admin-web đang chạy tại **https://lost-found-admin.onrender.com**. Đây là URL giao diện quản trị; URL `https://lost-found-api-ph8v.onrender.com` phục vụ API, `/health` và `/docs`.
+
+Render Static Site lấy mã từ `develop`, chạy `cd admin-web && npm ci && npm run build` tại gốc repository và phục vụ `admin-web/dist`. Cấu hình trên Render gồm `SKIP_INSTALL_DEPS=true`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` và `VITE_API_BASE_URL=https://lost-found-api-ph8v.onrender.com`. Backend cho phép origin `https://lost-found-admin.onrender.com` qua `ALLOWED_ORIGINS`. Không đưa secret key vào biến frontend.
+
+Các lần chạy tiếp theo chỉ cần mở hai terminal và chạy lệnh khởi động tương ứng. Xem thêm [backend](backend/README.md), [admin-web](admin-web/README.md) và [hợp đồng API](docs/api.md).
+
+## 10. Lộ trình 30 ngày
 
 Kế hoạch chi tiết từng ngày, phân công 3 người và hướng dẫn thực hiện nằm trong file **`docs/Lost-and-Found-Ke-hoach-30-ngay.docx`**.
 
@@ -346,16 +455,11 @@ Mức ưu tiên:
 - **Nên có:** thông báo, Bài của tôi, khối Cần xử lý, sắp xếp Gần nhất, chỉnh sửa hồ sơ.
 - **Nếu còn thời gian:** quên / đổi mật khẩu bằng mã email, ảnh đại diện, gửi ảnh trong chat, dashboard admin.
 
-### Tiến độ
-
-- [ ] **M1** Nền móng và đăng nhập
-- [ ] **M2** Đăng bài, bảng tin, xác minh
-- [ ] **M3** Chat, DONE, báo cáo
-- [ ] **M4** Admin web, hoàn thiện, phát hành
+Trạng thái từng API được ghi trong [hợp đồng API](docs/api.md), phân biệt kết quả kiểm tra cục bộ và phiên bản đã triển khai.
 
 ---
 
-## 10. Nhóm thực hiện
+## 11. Nhóm thực hiện
 
 | Thành viên | Vai trò chính |
 |---|---|

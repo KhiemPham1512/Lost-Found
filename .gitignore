@@ -18,6 +18,8 @@ local.properties
 # Khóa ký ứng dụng Android
 *.keystore
 *.jks
+# File cấu hình cá nhân khi phát triển (chứa mật khẩu tài khoản thử, token): KHÔNG commit
+*.local.json
 
 # ---------------------------------------------------------------------
 # 2. PYTHON / FASTAPI (backend/)
@@ -29,6 +31,9 @@ __pycache__/
 venv/
 env/
 .pytest_cache/
+.test-postgres/
+admin-web/test-results/
+admin-web/playwright-report/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
@@ -86,3 +91,17 @@ Thumbs.db
 Desktop.ini
 *.log
 *.tmp
+
+# Local working notes and visual QA artifacts; never publish with source.
+.local-artifacts/
+
+# Shared AI instructions are versioned; skills and local verification stay local.
+/.agents/
+/GLOSSARY.md
+/backend/tests/
+/backend/requirements-dev.txt
+/backend/pytest.ini
+/backend/mypy.ini
+/backend/ruff.toml
+/admin-web/tests/
+/admin-web/playwright.config.ts

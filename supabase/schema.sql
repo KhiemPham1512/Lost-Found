@@ -46,7 +46,8 @@ create type public.notification_type as enum (
 );
 create type public.admin_action_type as enum (
   'REMOVE_POST', 'RESTORE_POST', 'BAN_USER', 'UNBAN_USER',
-  'RESOLVE_REPORT', 'DISMISS_REPORT', 'VIEW_CONVERSATION'
+  'RESOLVE_REPORT', 'DISMISS_REPORT', 'VIEW_CONVERSATION',
+  'REVIEW_REPORT', 'LOCK_CONVERSATION'
 );
 
 -- ---------------------------------------------------------------------
@@ -113,6 +114,7 @@ create table public.posts (
   expires_at    timestamptz not null default (now() + interval '30 days'),
   resolved_at   timestamptz,
   removed_reason text,                                         -- lý do admin gỡ bài
+  removed_from_status public.post_status,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   -- cột phục vụ tìm kiếm: không dấu, chữ thường
@@ -213,6 +215,7 @@ create table public.messages (
 -- ---------------------------------------------------------------------
 create table public.reports (
   id                     uuid primary key default gen_random_uuid(),
+  report_no              bigint generated always as identity (start with 1001) unique,  -- mã dễ đọc: R-1001, R-1002...
   reporter_id            uuid not null references public.profiles (id) on delete cascade,
   target_post_id         uuid references public.posts (id)         on delete cascade,
   target_user_id         uuid references public.profiles (id)      on delete cascade,
@@ -223,6 +226,7 @@ create table public.reports (
   handled_by             uuid references public.profiles (id),
   handled_at             timestamptz,
   resolution_note        text,
+  resolution_action      text check (resolution_action in ('REMOVE_POST', 'BAN_USER', 'KEEP', 'DISMISS')),  -- kết quả hiển thị cho người báo cáo
   created_at             timestamptz not null default now(),
   -- đúng 1 đối tượng bị báo cáo
   check (num_nonnulls(target_post_id, target_user_id, target_conversation_id) = 1)
@@ -410,6 +414,18 @@ begin
 
   if new.status = old.status then
     return new;
+  end if;
+
+  -- Thông báo "cần hành động" mà hết cần thiết thì đánh dấu ĐÃ ĐỌC (vẫn giữ lại làm lịch sử, không xóa)
+  if old.status = 'SUBMITTED' then
+    update public.notifications
+       set read_at = coalesce(read_at, now())
+     where claim_id = new.id and type = 'CLAIM_RECEIVED';
+  end if;
+  if new.status in ('COMPLETED', 'CANCELLED', 'CLOSED') then
+    update public.notifications
+       set read_at = coalesce(read_at, now())
+     where claim_id = new.id and type = 'HANDOVER_WAITING';
   end if;
 
   if new.status = 'PASSED' then
@@ -707,9 +723,10 @@ insert into storage.buckets (id, name, public)
 values ('post-images', 'post-images', true)
 on conflict (id) do nothing;
 
+-- Bucket public: ảnh xem được qua địa chỉ công khai mà KHÔNG cần policy SELECT.
+-- Cố ý không tạo policy SELECT, để client không liệt kê được toàn bộ file trong bucket.
+-- (Nếu trước đó đã có policy này: drop policy if exists "post-images: read" on storage.objects;)
 drop policy if exists "post-images: read" on storage.objects;
-create policy "post-images: read" on storage.objects
-  for select using (bucket_id = 'post-images');
 
 drop policy if exists "post-images: upload to own folder" on storage.objects;
 create policy "post-images: upload to own folder" on storage.objects
@@ -753,3 +770,25 @@ on conflict (code) do nothing;
 -- ---------------------------------------------------------------------
 -- update public.profiles set role = 'ADMIN'
 --  where id = (select id from auth.users where email = 'admin@example.com');
+-- Expiration entry point. Invoker privileges; never callable by application users.
+create or replace function public.expire_posts()
+returns integer language plpgsql security invoker set search_path = '' as $$
+declare
+  v_post record;
+  v_count integer := 0;
+begin
+  for v_post in
+    select id, author_id, title from public.posts
+    where status = 'ACTIVE' and expires_at <= now()
+    order by id for update skip locked
+  loop
+    update public.posts set status = 'EXPIRED' where id = v_post.id;
+    update public.claims set status = 'CLOSED'
+      where post_id = v_post.id and status in ('SUBMITTED', 'PASSED');
+    perform public.notify(v_post.author_id, 'POST_EXPIRED', 'Bài đăng đã hết hạn',
+      'Bài đăng đã kết thúc thời gian hoạt động 30 ngày.', v_post.id, null);
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end $$;
+revoke all on function public.expire_posts() from public, anon, authenticated;

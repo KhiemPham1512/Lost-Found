@@ -1,0 +1,10 @@
+{
+  "supabase_url": "https://YOUR-PROJECT-ID.supabase.co",
+  "publishable_key": "sb_publishable_xxxxxxxxxxxxxxxx",
+  "accounts": {
+    "admin": { "email": "admin@example.com", "password": "mat-khau-tai-khoan-admin" },
+    "a":     { "email": "a@example.com",     "password": "mat-khau-a" },
+    "b":     { "email": "b@example.com",     "password": "mat-khau-b" },
+    "c":     { "email": "c@example.com",     "password": "mat-khau-c" }
+  }
+}
