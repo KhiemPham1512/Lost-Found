@@ -19,6 +19,14 @@ Khi ai đó hỏi "sao lại làm vậy?" thì mở file này. Các dòng dướ
 | 13 | Họp ngắn mỗi ngày, buổi tích hợp vào ngày 7, 14, 21, 28 | Theo kế hoạch 30 ngày | ☐ |
 
 ## Phân công
+### Đường đọc danh sách yêu cầu cho chủ bài (07/11/2026)
+
+Bổ sung `GET /posts/{post_id}/claims` làm đường đọc FastAPI cho màn hình duyệt
+Android: gom hồ sơ công khai, trạng thái và câu trả lời, kiểm tra chủ bài và
+phân trang tại server. Đây là ngoại lệ bổ sung cho nguyên tắc đọc Supabase
+ở quyết định 8; đường đọc RLS hiện có vẫn giữ nguyên. Dùng chung cho Lost và
+Found theo quyết định 3–4; không thay đổi luồng PASS/FAIL, schema hay RLS.
+
 - A (Backend + Database): 
 - B (Android lõi): 
 - C (Android luồng chính + admin web): 

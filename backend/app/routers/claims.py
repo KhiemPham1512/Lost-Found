@@ -1,7 +1,7 @@
 from uuid import UUID
 
 import psycopg
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.deps import get_active_user_id
 from app.db import get_conn
@@ -9,6 +9,7 @@ from app.schemas.claims import (
     CancelResponse,
     ClaimCreate,
     ClaimCreatedResponse,
+    ClaimsResponse,
     ConfirmResponse,
     DecisionRequest,
     DecisionResponse,
@@ -19,10 +20,22 @@ from app.services.claims import (
     confirm_handover,
     decide_claim,
     get_questions,
+    list_claims,
     submit_claim,
 )
 
 router = APIRouter(tags=["claims"])
+
+
+@router.get("/posts/{post_id}/claims", response_model=ClaimsResponse)
+def read_claims(
+    post_id: UUID,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    user_id: str = Depends(get_active_user_id),
+    conn: psycopg.Connection = Depends(get_conn),
+):
+    return list_claims(conn, user_id, post_id, limit, offset)
 
 
 @router.get("/posts/{post_id}/questions", response_model=QuestionsResponse)
@@ -34,7 +47,9 @@ def read_questions(
     return get_questions(conn, user_id, post_id)
 
 
-@router.post("/posts/{post_id}/claims", response_model=ClaimCreatedResponse, status_code=201)
+@router.post(
+    "/posts/{post_id}/claims", response_model=ClaimCreatedResponse, status_code=201
+)
 def create_claim(
     post_id: UUID,
     body: ClaimCreate,
@@ -42,6 +57,7 @@ def create_claim(
     conn: psycopg.Connection = Depends(get_conn),
 ):
     return submit_claim(conn, user_id, post_id, body)
+
 
 @router.post("/claims/{claim_id}/decision", response_model=DecisionResponse)
 def decision(
@@ -60,6 +76,7 @@ def cancel(
     conn: psycopg.Connection = Depends(get_conn),
 ):
     return cancel_claim(conn, user_id, claim_id)
+
 
 @router.post("/claims/{claim_id}/confirm", response_model=ConfirmResponse)
 def confirm(
