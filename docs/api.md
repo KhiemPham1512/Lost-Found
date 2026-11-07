@@ -326,6 +326,50 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
+#### `GET /posts/{post_id}/claims`
+Chủ bài lấy danh sách yêu cầu để đọc câu trả lời và duyệt. Áp dụng cho cả
+`FOUND` và `LOST`; bổ sung đường đọc FastAPI cho màn hình duyệt Android,
+không thay thế đường đọc Supabase/RLS hiện có.
+
+Chỉ chủ bài có hồ sơ còn hoạt động được gọi; claimant và admin không phải chủ
+bài nhận `403`. Không trả email, số điện thoại hoặc dữ liệu riêng tư khác.
+Trả mọi trạng thái claim, kể cả lịch sử khi bài không còn `ACTIVE`; đọc danh
+sách không cấp quyền duyệt bài đã ngừng hoạt động.
+
+Query: `limit` mặc định 20, từ 1–100; `offset` mặc định 0, tối thiểu 0.
+Sắp xếp `created_at DESC, claim_id DESC`; câu trả lời theo `position ASC`.
+`total` là tổng yêu cầu thuộc bài, không phải số phần tử của trang.
+```json
+{
+  "total": 1,
+  "items": [{
+    "claim_id": "c1...",
+    "claimant": {
+      "id": "u1...", "username": "thulan_k",
+      "display_name": "Thu Lan", "avatar_url": null
+    },
+    "status": "SUBMITTED",
+    "created_at": "2026-11-07T01:00:00Z",
+    "answers": [{
+      "question_id": "a1...", "position": 1,
+      "question_text": "Mặt trong ví có họa tiết gì?",
+      "answer_text": "Họa tiết lá"
+    }]
+  }]
+}
+```
+Không có yêu cầu hoặc vượt trang cuối: `items: []` (vẫn giữ `total`).
+Lost không có câu hỏi: `answers: []`. `display_name`/`avatar_url` có thể null.
+Android lấy `claim_id` của mục `SUBMITTED` để gọi decision bên dưới;
+`PASS`/`FAIL` trả trạng thái `PASSED`/`FAILED`, không dùng hai giá trị decision
+làm trạng thái hiển thị. Tải lại danh sách sau quyết định; nếu dữ liệu đã đổi,
+decision có thể trả `409` theo quy tắc hiện hành.
+
+Lỗi: `401` thiếu/token không hợp lệ · `403` hồ sơ thiếu/bị khóa hoặc không phải
+chủ bài · `404` bài không tồn tại · `422` UUID hoặc phân trang không hợp lệ.
+**Trạng thái:** đã triển khai và kiểm tra HTTP cục bộ trên PostgreSQL test cô
+lập; chưa merge/deploy hoặc kiểm chứng Android/live. Không cần migration.
+
 #### `POST /claims/{claim_id}/decision` ✅
 **Chỉ chủ bài** được gọi. Yêu cầu phải đang ở trạng thái `SUBMITTED`.
 ```json

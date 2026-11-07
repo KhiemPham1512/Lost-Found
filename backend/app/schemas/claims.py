@@ -33,6 +33,33 @@ class ClaimCreatedResponse(BaseModel):
     status: str
 
 
+class ClaimantOut(BaseModel):
+    id: UUID
+    username: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+class ClaimAnswerOut(BaseModel):
+    question_id: UUID
+    position: int
+    question_text: str
+    answer_text: str
+
+
+class ClaimListItem(BaseModel):
+    claim_id: UUID
+    claimant: ClaimantOut
+    status: str
+    created_at: datetime
+    answers: list[ClaimAnswerOut]
+
+
+class ClaimsResponse(BaseModel):
+    total: int
+    items: list[ClaimListItem]
+
+
 class DecisionRequest(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
