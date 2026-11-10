@@ -1,9 +1,24 @@
 """Admin read interface: bounded lists, private-field projection and statistics."""
 
 import psycopg
+from fastapi import HTTPException
 from psycopg.rows import dict_row
 
 LOCAL_DAY = "date_trunc('day', now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh'"
+
+_POST_SELECT = """select p.id,p.type,p.title,p.status,p.created_at,p.expires_at,
+    p.author_id,u.username as author_username,p.search_text,c.name as category_name,
+    (select count(*) from public.reports r where r.target_post_id=p.id) as report_count
+    from public.posts p join public.profiles u on u.id=p.author_id
+    join public.categories c on c.id=p.category_id"""
+
+_USER_SELECT = """select u.id,u.username,u.display_name,u.role,u.is_banned,u.created_at,
+    to_char(u.created_at at time zone 'Asia/Ho_Chi_Minh','MM/YYYY') as joined_month,
+    case when v.phone is null then null else left(v.phone,2) || '•• ••• ' || right(v.phone,3) end as phone_masked,
+    (select count(*) from public.posts p where p.author_id=u.id) as post_count,
+    (select count(*) from public.reports r where r.target_user_id=u.id
+      or r.target_post_id in (select id from public.posts where author_id=u.id)) as report_count
+    from public.profiles u left join public.user_private v on v.user_id=u.id"""
 
 
 def _page(conn, query, where, params, limit, offset):
@@ -30,17 +45,30 @@ def list_posts(conn: psycopg.Connection, type, status, q, limit, offset):
         params.append(q.strip())
     return _page(
         conn,
-        """select p.id,p.type,p.title,p.status,p.created_at,p.expires_at,
-        p.author_id,u.username as author_username,p.search_text,
-        c.name as category_name,
-        (select count(*) from public.reports r where r.target_post_id=p.id) as report_count
-        from public.posts p join public.profiles u on u.id=p.author_id
-        join public.categories c on c.id=p.category_id""",
+        _POST_SELECT,
         " and ".join(clauses),
         params,
         limit,
         offset,
     )
+
+
+def get_post(conn: psycopg.Connection, post_id):
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            f"""select summary.*,p.description,p.location_text,p.event_time,
+            array(select t.name from public.post_tags pt join public.tags t on t.id=pt.tag_id
+                  where pt.post_id=p.id order by t.name) as tags,
+            array(select storage_path from public.post_images where post_id=p.id
+                  order by sort_order,id) as image_paths
+            from ({_POST_SELECT}) summary join public.posts p on p.id=summary.id
+            where p.id=%s""",
+            (post_id,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bài đăng")
+    return row
 
 
 def list_users(conn: psycopg.Connection, status, q, limit, offset):
@@ -58,18 +86,25 @@ def list_users(conn: psycopg.Connection, status, q, limit, offset):
         params.append(q.strip())
     return _page(
         conn,
-        """select u.id,u.username,u.display_name,u.role,u.is_banned,u.created_at,
-        to_char(u.created_at at time zone 'Asia/Ho_Chi_Minh','MM/YYYY') as joined_month,
-        case when v.phone is null then null else left(v.phone,2) || '•• ••• ' || right(v.phone,3) end as phone_masked,
-        (select count(*) from public.posts p where p.author_id=u.id) as post_count,
-        (select count(*) from public.reports r where r.target_user_id=u.id
-          or r.target_post_id in (select id from public.posts where author_id=u.id)) as report_count
-        from public.profiles u left join public.user_private v on v.user_id=u.id""",
+        _USER_SELECT,
         " and ".join(clauses),
         params,
         limit,
         offset,
     )
+
+
+def get_user(conn: psycopg.Connection, user_id):
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            f"""select summary.*,u.avatar_url,u.bio from ({_USER_SELECT}) summary
+            join public.profiles u on u.id=summary.id where u.id=%s""",
+            (user_id,),
+        )
+        row = cur.fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy người dùng")
+    return row
 
 
 def list_actions(conn: psycopg.Connection, target_type, range, q, limit, offset):

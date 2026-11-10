@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type Column } from "./DataTable";
 import type { PageData, Tab } from "./types";
 import { ReportDetail } from "./ReportDetail";
+import { CatalogDetail } from "./CatalogDetail";
+import { catalogModeration } from "./catalogModeration";
 import { ModerationDialog, type ModerationAction } from "./ModerationDialog";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -123,16 +125,27 @@ export function Catalog({
   const [type, setType] = useState("");
   const typeOptions = typeFilters[tab];
   const [reportId, setReportId] = useState(initialReportId);
+  const [detailId, setDetailId] = useState<string>();
+  const returnFocus = useRef<string | undefined>(undefined);
+  const catalogHeading = useRef<HTMLHeadingElement>(null);
   const [moderation, setModeration] = useState<ModerationAction>();
   const result = useQuery({
     queryKey: [tab, query, offset, status, type],
-    enabled: !reportId,
+    enabled: !reportId && !detailId,
     queryFn: ({ signal }) =>
       api<PageData>(
         `/admin/${tab}?${new URLSearchParams({ q: query, limit: "20", offset: String(offset), ...(status ? { [tab === "actions" ? "range" : "status"]: status } : {}), ...(typeOptions && type ? { [tab === "actions" ? "target_type" : "type"]: type } : {}) })}`,
         signal,
       ),
   });
+  useEffect(() => {
+    if (!detailId && !result.isFetching && returnFocus.current) {
+      (
+        document.getElementById(returnFocus.current) ?? catalogHeading.current
+      )?.focus();
+      returnFocus.current = undefined;
+    }
+  }, [detailId, result.isFetching]);
   function search(event: FormEvent) {
     event.preventDefault();
     setQuery(draft.trim());
@@ -144,6 +157,14 @@ export function Catalog({
         key={reportId}
         id={reportId}
         back={() => setReportId(undefined)}
+      />
+    );
+  if (detailId && (tab === "posts" || tab === "users"))
+    return (
+      <CatalogDetail
+        kind={tab}
+        id={detailId}
+        back={() => setDetailId(undefined)}
       />
     );
   return (
@@ -242,7 +263,9 @@ export function Catalog({
         </Button>
       </form>
       <div className="catalog-heading">
-        <h2>{titles[tab]}</h2>
+        <h2 ref={catalogHeading} tabIndex={-1}>
+          {titles[tab]}
+        </h2>
         {result.isSuccess && (
           <p className="muted">{result.data.total} kết quả</p>
         )}
@@ -272,36 +295,25 @@ export function Catalog({
                         label: "Xem",
                         run: () => setReportId(String(row.id)),
                       };
-                    if (
-                      tab === "posts" &&
-                      ["DELETED", "EXPIRED"].includes(row.status ?? "")
-                    )
-                      return;
-                    if (tab === "users" && row.role === "ADMIN") return;
-                    const verb =
-                      tab === "posts"
-                        ? row.status === "REMOVED"
-                          ? "restore"
-                          : "remove"
-                        : row.is_banned
-                          ? "unban"
-                          : "ban";
-                    const label = {
-                      restore: "Khôi phục",
-                      remove: "Gỡ bài",
-                      ban: "Khóa",
-                      unban: "Mở khóa",
-                    }[verb];
-                    return {
-                      label,
-                      run: () =>
-                        setModeration({
-                          label,
-                          target: row.title ?? row.username ?? String(row.id),
-                          path: `/admin/${tab}/${row.id}/${verb}`,
-                          needsReason: verb !== "restore",
-                        }),
+                    const id = `catalog-view-${tab}-${row.id}`;
+                    const view = {
+                      label: "Xem",
+                      id,
+                      run: () => {
+                        returnFocus.current = id;
+                        setDetailId(String(row.id));
+                      },
                     };
+                    const moderation = catalogModeration(tab, row);
+                    return moderation
+                      ? [
+                          view,
+                          {
+                            label: moderation.label,
+                            run: () => setModeration(moderation),
+                          },
+                        ]
+                      : [view];
                   }
             }
           />

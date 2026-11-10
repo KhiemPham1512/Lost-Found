@@ -3,7 +3,20 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
-**Hoàn thiện chức năng admin (nhánh feature, chưa merge/deploy):** Nhật ký có
+**Chi tiết catalog admin (nhánh feature, chưa merge/deploy):** danh sách bài và
+người dùng có nút Xem riêng bên cạnh kiểm duyệt. Mở bài → xem người đăng → quay
+lại giữ danh sách/từ khóa/bộ lọc/trang và trả focus về nút Xem; nếu bản ghi không
+còn khớp bộ lọc sau kiểm duyệt thì focus về tiêu đề danh sách. Chi tiết báo cáo
+cũng mở được hồ sơ người bị báo cáo/người đăng. Hai đường đọc mới ở mục 3.7 chỉ
+cho admin còn hoạt động, không cấp quyền chat hay đọc câu trả lời xác minh.
+Figma được hoãn theo yêu cầu người dùng; dùng teal/Geist và component hiện có.
+Kiểm chứng local: 98 test backend trên PostgreSQL cô lập, mypy 34 file,
+41 test browser đạt và 2 probe/thử nghiệm cũ được bỏ qua; build TypeScript/Vite
+đạt. Browser kiểm soát external Auth/API, có kiểm tra điều hướng/quay lại,
+kiểm duyệt/lỗi/thử lại và 375/768/1024/1440px kể cả nội dung dài. Không có thay
+đổi dữ liệu live trong phần triển khai chi tiết; chưa kiểm chứng hai GET mới trên live.
+
+**Hoàn thiện chức năng admin (PR #35 đã merge/deploy):** Nhật ký có
 bộ lọc Tất cả/Bài đăng/Tài khoản/Hội thoại, gửi `target_type` tới API hiện có,
 kết hợp từ khóa/khoảng thời gian; đổi loại về trang đầu, Tất cả bỏ điều kiện,
 Xóa bộ lọc xóa cả loại/từ khóa/khoảng thời gian. Dashboard bổ sung tên đối tượng
@@ -18,8 +31,10 @@ màn chi tiết bài/người dùng độc lập hay chức năng mở ảnh tro
 Kiểm chứng local ngày 10/11/2026: 35 test browser đạt, 2 probe/thử nghiệm cũ
 được bỏ qua; build TypeScript/Vite và diff-check đạt. Bốn kích thước
 375/768/1024/1440px không tràn viewport hoặc bảng ở các phần thay đổi. Test
-kiểm soát external Auth/API; chưa smoke live bản thay đổi. Sửa Figma được hoãn
-theo yêu cầu người dùng, giữ các chức năng đã đối chiếu trong docs.
+kiểm soát external Auth/API. Render đã xác nhận cả frontend/backend live ở
+`4bc7a598bcc843f496a2c341f53e552b925bc343`. Smoke Auth thật ngày 10/11/2026
+trả đủ `target_label` cho 5 báo cáo mới nhất; chưa chạy browser live riêng cho
+các thay đổi UI của PR #35. Sửa Figma được hoãn theo yêu cầu người dùng.
 Backend đạt 87 test trên PostgreSQL test cô lập và mypy 34 file; kiểm tra HTTP
 đối chiếu nhãn đối tượng thống kê cho cả POST/USER/CONVERSATION. Không cần migration.
 
@@ -69,8 +84,9 @@ Dữ liệu QA được giữ để truy vết và đang được tính vào th�
 **Phạm vi đã xác nhận:** các kiểm chứng trên áp dụng cho admin-web và API,
 không xác nhận tích hợp Android/thiết bị hoặc toàn bộ chức năng Figma. Figma
 hiện có danh sách bài/người dùng và chi tiết báo cáo; chưa có frame chi tiết
-riêng cho bài/người dùng admin. Hợp đồng bên dưới cũng chưa có GET chi tiết
-riêng cho hai catalog này; không dùng frame chi tiết mobile để suy ra API admin.
+riêng cho bài/người dùng admin. Hai GET chi tiết được bổ sung trên nhánh feature
+theo phạm vi người dùng giao, chưa xác nhận live; không dùng frame chi tiết mobile
+để suy ra quyền hoặc các trường riêng tư cho API admin.
 Các snapshot ngày 05/11 bên dưới là bằng chứng lịch sử, không phải SHA admin hiện tại.
 
 **Bổ sung catalog theo Figma (đã kiểm chứng live, 05/11/2026):** danh sách báo cáo hiển thị
@@ -515,11 +531,39 @@ Người không phải admin gọi các endpoint này nhận `403`. **Mọi hàn
 | `GET /admin/reports?status=&type=&q=&limit=&offset=` | Báo cáo | Danh sách: mã `R-<report_no>`, loại (bài, tài khoản, hội thoại), đối tượng, lý do, handle người báo cáo, thời gian, trạng thái. `status`: `PENDING`, `REVIEWING`, `RESOLVED`, `DISMISSED` | ✅ |
 | `GET /admin/reports/{id}` | Chi tiết báo cáo | Báo cáo, bài hoặc tài khoản bị báo cáo (kèm số bài và số lần bị báo cáo của người đăng), **mọi báo cáo khác về cùng đối tượng**, tóm tắt hội thoại liên quan (số tin, tin cuối), nhật ký xử lý | ✅ |
 | `GET /admin/posts?type=&status=&q=&limit=&offset=` | Bài đăng | Danh sách kèm **số báo cáo** của từng bài | ✅ |
+| `GET /admin/posts/{id}` | Chi tiết bài admin (Figma hoãn) | Các trường danh sách cùng mô tả, địa điểm, thời gian mất/nhặt, tags và đường dẫn ảnh công khai | 🧪 |
 | `GET /admin/users?status=&q=&limit=&offset=` | Người dùng | Handle, **số điện thoại đã che** (`09•• ••• 321`), vai trò, tháng tham gia, số bài, số lần bị báo cáo, trạng thái. `status`: `ACTIVE`, `BANNED`, `REPORTED` (bị báo cáo nhiều) | ✅ |
+| `GET /admin/users/{id}` | Chi tiết người dùng admin (Figma hoãn) | Các trường danh sách cùng `avatar_url`, `bio`; luôn giữ SĐT đã che | 🧪 |
 | `GET /admin/actions?target_type=&range=&q=` | Nhật ký hoạt động | Thời gian, admin, hành động, đối tượng, mã báo cáo, ghi chú. `range`: `today`, `7d`, `30d` | ✅ |
 | `GET /admin/conversations/{id}/messages?limit=100&before_id=` | Hội thoại bị báo cáo | Tin nhắn của cuộc chat **bị báo cáo**. Mỗi lần gọi **luôn ghi log** `VIEW_CONVERSATION` | ✅ |
 
 Số điện thoại **đầy đủ không bao giờ được trả về** cho admin web; backend chỉ gửi bản đã che.
+
+#### Chi tiết catalog admin: `GET /admin/posts/{id}` và `GET /admin/users/{id}` 🧪
+
+Hai endpoint trả một object (không bọc `items`), không có query phân trang:
+
+- **Post:** giữ nguyên các trường `id`, `type`, `title`, `status`, `author_id`,
+  `author_username`, `category_name`, `created_at`, `expires_at`, `report_count`
+  như danh sách. Thêm `description` (nullable), `location_text` (nullable),
+  `event_time` (nullable), `tags` (mảng tên, sắp theo tên), `image_paths` (mảng
+  đường dẫn Storage, theo `sort_order` rồi ID). Hai mảng có thể rỗng. Ảnh dùng
+  bucket công khai `post-images` như mục 4.5. Admin đọc được mọi trạng thái bài,
+  kể cả `DELETED`; quyền gỡ/khôi phục vẫn theo endpoint kiểm duyệt hiện có.
+- **User:** giữ nguyên `id`, `username`, `display_name`, `role`, `is_banned`,
+  `created_at`, `joined_month`, `phone_masked`, `post_count`, `report_count` như
+  danh sách; thêm `avatar_url`, `bio` (đều nullable, dữ liệu hồ sơ công khai).
+  `phone_masked` có thể null; số bài/báo cáo có cùng cách tính với danh sách,
+  gồm cả bài xóa mềm khi tính `post_count`. Admin có thể đọc hồ sơ admin khác,
+  nhưng không mở thêm quyền khóa tài khoản admin.
+
+Chỉ admin có hồ sơ còn hoạt động được gọi. Lỗi: `401` thiếu/token không hợp lệ;
+`403` người thường, hồ sơ thiếu hoặc admin bị khóa; `404` không có đối tượng;
+`422` ID không phải UUID. Không trả email, SĐT đầy đủ, câu hỏi/câu trả lời xác
+minh, claims, nội dung chat hoặc ghi chú báo cáo nội bộ qua hai đường này.
+Các GET không đổi dữ liệu hoặc tạo audit xem mới. Không cần migration.
+Đã kiểm tra HTTP cục bộ trên PostgreSQL test cô lập; chưa merge/deploy hoặc
+kiểm chứng Auth thật cho hai endpoint mới. Không ảnh hưởng contract Android.
 
 #### `GET /admin/reports` và `GET /admin/reports/{id}`: dữ liệu trả về
 

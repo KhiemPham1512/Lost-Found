@@ -85,6 +85,14 @@ class AdminPostsResponse(BaseModel):
     items: list[AdminPost]
 
 
+class AdminPostDetail(AdminPost):
+    description: str | None
+    location_text: str | None
+    event_time: datetime | None
+    tags: list[str]
+    image_paths: list[str]
+
+
 class AdminUser(BaseModel):
     id: UUID
     username: str
@@ -101,6 +109,11 @@ class AdminUser(BaseModel):
 class AdminUsersResponse(BaseModel):
     total: int
     items: list[AdminUser]
+
+
+class AdminUserDetail(AdminUser):
+    avatar_url: str | None
+    bio: str | None
 
 
 class AdminAction(BaseModel):

@@ -7,7 +7,23 @@ bans. Post and user lists support independent moderation with required reasons.
 Only directly reported conversations expose message inspection and locking;
 image messages are identified as images without displaying attachments.
 
-Current feature branch (not yet merged/deployed) completes existing admin data:
+Current feature branch (not yet merged/deployed) adds independent post/user
+details through admin-only GET `/admin/posts/{id}` and `/admin/users/{id}`.
+Lists retain their moderation buttons and add View, including inactive posts
+and admin profiles. Returning retains search/filter/page and restores focus;
+after a mutation removes the record from a filtered list, focus moves to its
+heading. Post details open the public author profile; reports also link to the
+user profile. The same remove/restore/ban/unban dialogs and restrictions apply.
+Phones remain masked; verification answers and private chats are not included.
+There is no migration or dependency change. Figma editing remains deferred.
+Local verification: 98 backend tests on isolated PostgreSQL and mypy across 34
+files; 41 browser tests passed with two pre-existing skips; TypeScript/Vite build
+passed. New detail/navigation/moderation/error/nullable-data flows and
+375/768/1024/1440px layouts were checked, including long text without horizontal
+overflow. Browser Auth/API responses are controlled; new endpoints are not yet
+verified live. Tests, screenshots and helpers remain local.
+
+PR #35 (merged and deployed) completes existing admin data:
 audit history gains All/Post/User/Conversation filtering through the existing
 `target_type` parameter, combined with query/range and page reset. All omits the
 parameter; Reset clears all conditions. Dashboard recent reports show the target
@@ -21,7 +37,10 @@ Local verification on 2026-11-10: 35 browser tests passed, two pre-existing
 diagnostic/abandoned-experiment probes skipped; TypeScript/Vite build and diff
 check passed. The changed surfaces fit 375/768/1024/1440px without viewport or
 internal table overflow. External Auth/API are controlled in these tests; this
-feature is not yet verified live. Figma editing is deferred at the user's request.
+UI changes from that PR have not had a separate hosted browser smoke yet.
+Render confirmed both services live on `4bc7a598bcc843f496a2c341f53e552b925bc343`;
+a real QA Auth stats read returned all five recent target labels on 2026-11-10.
+Figma editing is deferred at the user's request.
 Backend verification passed 87 tests on isolated PostgreSQL and mypy across 34
 source files. An HTTP test verifies stats target labels for all three report
 types; it initially failed because the field was missing from the real response.
@@ -109,7 +128,8 @@ Credentials, helper scripts, result manifests and screenshots remain local.
 
 These checks do not verify Android device integration or full Figma parity.
 Figma has admin post/user list frames and report details; dedicated admin
-post/user detail frames and generic detail API endpoints are not specified.
+post/user detail frames remain deferred. Their new API contract and local-only
+implementation status are documented in docs/api.md; chat image viewing follows.
 
 ```powershell
 cd admin-web
