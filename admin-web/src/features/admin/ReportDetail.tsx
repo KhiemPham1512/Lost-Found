@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { labels } from "./DataTable";
 import type { ReportDetailData } from "./types";
 import { ReportedMessages } from "./ReportedMessages";
+import { CatalogDetail } from "./CatalogDetail";
 import { ModerationDialog, type ModerationAction } from "./ModerationDialog";
 
 export function ReportDetail({ id, back }: { id: string; back: () => void }) {
@@ -18,14 +19,16 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
   const [note, setNote] = useState("");
   const [success, setSuccess] = useState("");
   const [moderation, setModeration] = useState<ModerationAction>();
+  const [userId, setUserId] = useState<string>();
   const result = useQuery({
     queryKey: ["report", id],
+    enabled: !userId,
     queryFn: ({ signal }) =>
       api<ReportDetailData>(`/admin/reports/${id}`, signal),
   });
   useEffect(() => {
-    if (result.isSuccess) heading.current?.focus();
-  }, [result.isSuccess]);
+    if (result.isSuccess && !userId) heading.current?.focus();
+  }, [result.isSuccess, userId]);
   const mutation = useMutation({
     mutationFn: ({ kind }: { kind: "review" | "resolve" }) =>
       api<{ login_blocked?: boolean; affected_reports: number }>(
@@ -49,6 +52,15 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
     event.preventDefault();
     mutation.mutate({ kind: "resolve" });
   }
+  if (userId)
+    return (
+      <CatalogDetail
+        kind="users"
+        id={userId}
+        back={() => setUserId(undefined)}
+        backLabel="Quay lại báo cáo"
+      />
+    );
   if (result.isPending) return <Skeleton className="h-64 w-full" />;
   if (result.isError)
     return (
@@ -186,35 +198,44 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
               </>
             )}
             {user && (
-              <dl className="detail-meta">
-                <div>
-                  <dt>{post ? "Người đăng" : "Định danh"}</dt>
-                  <dd>{user.username}</dd>
-                </div>
-                <div>
-                  <dt>Tài khoản</dt>
-                  <dd>{user.is_banned ? "Bị khóa" : "Hoạt động"}</dd>
-                </div>
-                <div>
-                  <dt>Tham gia</dt>
-                  <dd>
-                    {user.joined_at
-                      ? new Date(user.joined_at).toLocaleDateString("vi-VN", {
-                          month: "2-digit",
-                          year: "numeric",
-                        })
-                      : "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Bài đã đăng</dt>
-                  <dd>{user.post_count}</dd>
-                </div>
-                <div>
-                  <dt>Báo cáo trước đây</dt>
-                  <dd>{user.reported_before_count}</dd>
-                </div>
-              </dl>
+              <>
+                <dl className="detail-meta">
+                  <div>
+                    <dt>{post ? "Người đăng" : "Định danh"}</dt>
+                    <dd>{user.username}</dd>
+                  </div>
+                  <div>
+                    <dt>Tài khoản</dt>
+                    <dd>{user.is_banned ? "Bị khóa" : "Hoạt động"}</dd>
+                  </div>
+                  <div>
+                    <dt>Tham gia</dt>
+                    <dd>
+                      {user.joined_at
+                        ? new Date(user.joined_at).toLocaleDateString("vi-VN", {
+                            month: "2-digit",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Bài đã đăng</dt>
+                    <dd>{user.post_count}</dd>
+                  </div>
+                  <div>
+                    <dt>Báo cáo trước đây</dt>
+                    <dd>{user.reported_before_count}</dd>
+                  </div>
+                </dl>
+                <Button
+                  variant="outline"
+                  aria-label={`Xem người dùng ${user.username}`}
+                  onClick={() => setUserId(user.id)}
+                >
+                  Xem người dùng
+                </Button>
+              </>
             )}
             {report.target.type === "CONVERSATION" && conversation && (
               <dl className="detail-meta">
