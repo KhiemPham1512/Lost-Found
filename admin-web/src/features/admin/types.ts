@@ -32,6 +32,7 @@ export type ReportUser = {
   is_banned: boolean;
   post_count: number;
   reported_before_count: number;
+  joined_at: string;
 };
 export type ReportDetailData = {
   id: string;
@@ -47,10 +48,15 @@ export type ReportDetailData = {
     type: "POST" | "USER" | "CONVERSATION";
     post: {
       id: string;
+      type: "LOST" | "FOUND";
       title: string;
       description: string;
       status: string;
       location_text: string;
+      category: { id: number; name: string };
+      tags: string[];
+      event_time: string | null;
+      created_at: string;
       image_paths: string[];
       author: ReportUser | null;
     } | null;

@@ -132,8 +132,17 @@ def get_stats(conn: psycopg.Connection):
           group by d.day order by d.day""")
         days = cur.fetchall()
         cur.execute("""select r.id,'R-' || r.report_no as code,r.reason,r.status,r.created_at,
-            case when r.target_post_id is not null then 'POST' when r.target_user_id is not null then 'USER' else 'CONVERSATION' end as target_type
-            from public.reports r order by r.created_at desc,r.id desc limit 5""")
+            case when r.target_post_id is not null then 'POST' when r.target_user_id is not null then 'USER' else 'CONVERSATION' end as target_type,
+            case when r.target_post_id is not null then p.title
+                 when r.target_user_id is not null then u.username
+                 else ca.username || ' ↔ ' || cc.username end as target_label
+            from public.reports r
+            left join public.posts p on p.id=r.target_post_id
+            left join public.profiles u on u.id=r.target_user_id
+            left join public.conversations cv on cv.id=r.target_conversation_id
+            left join public.profiles ca on ca.id=cv.post_author_id
+            left join public.profiles cc on cc.id=cv.claimant_id
+            order by r.created_at desc,r.id desc limit 5""")
         recent = cur.fetchall()
     return {
         "pending_reports": reports["pending"],

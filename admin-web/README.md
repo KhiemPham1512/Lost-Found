@@ -7,6 +7,25 @@ bans. Post and user lists support independent moderation with required reasons.
 Only directly reported conversations expose message inspection and locking;
 image messages are identified as images without displaying attachments.
 
+Current feature branch (not yet merged/deployed) completes existing admin data:
+audit history gains All/Post/User/Conversation filtering through the existing
+`target_type` parameter, combined with query/range and page reset. All omits the
+parameter; Reset clears all conditions. Dashboard recent reports show the target
+label and submission time, with the existing labeled record layout on smaller
+screens. Reported posts expose their existing type/category/tags/event time,
+posting date and the author's joining month. The stats response adds
+`recent_reports[].target_label` using public post titles/account handles or both
+conversation handles, matching report-list labels. No new endpoint, permission,
+database schema or dependency; dedicated post/user details and chat image viewing follow.
+Local verification on 2026-11-10: 35 browser tests passed, two pre-existing
+diagnostic/abandoned-experiment probes skipped; TypeScript/Vite build and diff
+check passed. The changed surfaces fit 375/768/1024/1440px without viewport or
+internal table overflow. External Auth/API are controlled in these tests; this
+feature is not yet verified live. Figma editing is deferred at the user's request.
+Backend verification passed 87 tests on isolated PostgreSQL and mypy across 34
+source files. An HTTP test verifies stats target labels for all three report
+types; it initially failed because the field was missing from the real response.
+
 Reported conversations show public sender handles, with sender IDs as a fallback
 when a profile is unavailable. Messages run from oldest to newest across loaded
 pages; the reporter's messages appear on the right and system notices in the
@@ -63,8 +82,9 @@ at commit `a5fdb02` before this check. The browser blocked all business mutation
 Type filters from Figma are implemented and verified locally: All/Lost/Found on
 posts and All/Post/User/Conversation on reports. They use the existing `type`
 parameter together with search/status; changing type resets pagination, All
-removes type and Reset clears the complete filter. Other catalogs omit this
-control. The shared shadcn ToggleGroup provides labeled keyboard controls with
+removes type and Reset clears the complete filter. Users omit this control;
+audit history uses its separate target-type filter described above.
+The shared shadcn ToggleGroup provides labeled keyboard controls with
 44px touch targets and the existing semantic colors. Loading is exposed through
 the catalog's busy state; error/retry and empty results retain the selected type.
 

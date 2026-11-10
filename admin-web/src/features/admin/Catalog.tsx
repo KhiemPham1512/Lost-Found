@@ -64,6 +64,11 @@ const typeFilters: Partial<Record<Exclude<Tab, "stats">, [string, string][]>> =
       ["LOST", "Lost"],
       ["FOUND", "Found"],
     ],
+    actions: [
+      ["POST", "Bài đăng"],
+      ["USER", "Tài khoản"],
+      ["CONVERSATION", "Hội thoại"],
+    ],
   };
 
 const columns: Record<Exclude<Tab, "stats">, Column[]> = {
@@ -124,7 +129,7 @@ export function Catalog({
     enabled: !reportId,
     queryFn: ({ signal }) =>
       api<PageData>(
-        `/admin/${tab}?${new URLSearchParams({ q: query, limit: "20", offset: String(offset), ...(status ? { [tab === "actions" ? "range" : "status"]: status } : {}), ...(typeOptions && type ? { type } : {}) })}`,
+        `/admin/${tab}?${new URLSearchParams({ q: query, limit: "20", offset: String(offset), ...(status ? { [tab === "actions" ? "range" : "status"]: status } : {}), ...(typeOptions && type ? { [tab === "actions" ? "target_type" : "type"]: type } : {}) })}`,
         signal,
       ),
   });
@@ -164,7 +169,11 @@ export function Catalog({
           <FieldGroup className="type-filter">
             <Field>
               <FieldLabel id="catalog-type-label">
-                {tab === "posts" ? "Loại bài" : "Loại báo cáo"}
+                {tab === "posts"
+                  ? "Loại bài"
+                  : tab === "actions"
+                    ? "Loại đối tượng"
+                    : "Loại báo cáo"}
               </FieldLabel>
               <ToggleGroup
                 aria-labelledby="catalog-type-label"
