@@ -122,6 +122,14 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
                 <h3>{post.title}</h3>
                 <dl className="detail-meta">
                   <div>
+                    <dt>Loại bài</dt>
+                    <dd>{labels[post.type] ?? post.type ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>Danh mục</dt>
+                    <dd>{post.category?.name ?? "—"}</dd>
+                  </div>
+                  <div>
                     <dt>Trạng thái</dt>
                     <dd>{labels[post.status] ?? post.status}</dd>
                   </div>
@@ -129,7 +137,35 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
                     <dt>Địa điểm</dt>
                     <dd>{post.location_text || "—"}</dd>
                   </div>
+                  <div>
+                    <dt>Thời gian mất/nhặt</dt>
+                    <dd>
+                      {post.event_time
+                        ? new Date(post.event_time).toLocaleString("vi-VN")
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Ngày đăng</dt>
+                    <dd>
+                      {post.created_at
+                        ? new Date(post.created_at).toLocaleString("vi-VN")
+                        : "—"}
+                    </dd>
+                  </div>
                 </dl>
+                {!!post.tags?.length && (
+                  <ul
+                    className="flex flex-wrap gap-2"
+                    aria-label="Tag bài đăng"
+                  >
+                    {post.tags.map((tag) => (
+                      <li key={tag}>
+                        <Badge variant="secondary">{tag}</Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <p className="detail-copy">{post.description}</p>
                 <div className="detail-images">
                   {post.image_paths.map((path) => (
@@ -158,6 +194,17 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
                 <div>
                   <dt>Tài khoản</dt>
                   <dd>{user.is_banned ? "Bị khóa" : "Hoạt động"}</dd>
+                </div>
+                <div>
+                  <dt>Tham gia</dt>
+                  <dd>
+                    {user.joined_at
+                      ? new Date(user.joined_at).toLocaleDateString("vi-VN", {
+                          month: "2-digit",
+                          year: "numeric",
+                        })
+                      : "—"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Bài đã đăng</dt>

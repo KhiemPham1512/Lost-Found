@@ -143,6 +143,7 @@ class RecentReport(BaseModel):
     status: ReportStatus
     created_at: datetime
     target_type: ReportTargetType
+    target_label: str
 
 
 class AdminStatsResponse(BaseModel):

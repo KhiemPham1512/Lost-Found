@@ -3,6 +3,26 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
+**Hoàn thiện chức năng admin (nhánh feature, chưa merge/deploy):** Nhật ký có
+bộ lọc Tất cả/Bài đăng/Tài khoản/Hội thoại, gửi `target_type` tới API hiện có,
+kết hợp từ khóa/khoảng thời gian; đổi loại về trang đầu, Tất cả bỏ điều kiện,
+Xóa bộ lọc xóa cả loại/từ khóa/khoảng thời gian. Dashboard bổ sung tên đối tượng
+và thời gian gửi trong báo cáo mới nhất; phần này dùng bố cục bản ghi dọc trên
+màn hình nhỏ. Chi tiết báo cáo bài hiển thị thêm loại, danh mục, tag, thời gian
+mất/nhặt, ngày đăng và tháng tham gia của người đăng từ response hiện có.
+`GET /admin/stats` bổ sung `recent_reports[].target_label`: tiêu đề bài, handle
+tài khoản hoặc hai handle của hội thoại (`a ↔ b`), cùng cách đặt tên như danh
+sách báo cáo. Các trường/metric cũ và thứ tự năm báo cáo mới nhất giữ nguyên.
+Không thêm endpoint, quyền, trạng thái hoặc thay đổi database. Đây chưa phải
+màn chi tiết bài/người dùng độc lập hay chức năng mở ảnh trong chat.
+Kiểm chứng local ngày 10/11/2026: 35 test browser đạt, 2 probe/thử nghiệm cũ
+được bỏ qua; build TypeScript/Vite và diff-check đạt. Bốn kích thước
+375/768/1024/1440px không tràn viewport hoặc bảng ở các phần thay đổi. Test
+kiểm soát external Auth/API; chưa smoke live bản thay đổi. Sửa Figma được hoãn
+theo yêu cầu người dùng, giữ các chức năng đã đối chiếu trong docs.
+Backend đạt 87 test trên PostgreSQL test cô lập và mypy 34 file; kiểm tra HTTP
+đối chiếu nhãn đối tượng thống kê cho cả POST/USER/CONVERSATION. Không cần migration.
+
 Admin-web có dashboard, bộ lọc danh sách, chi tiết và xử lý báo cáo, gỡ/khôi phục
 bài, khóa/mở khóa tài khoản và xem/khóa hội thoại bị báo cáo trực tiếp. Các luồng
 này đã được kiểm tra cục bộ. Tin nhắn ảnh chỉ
@@ -30,8 +50,9 @@ JavaScript chưa xử lý. Lỗi tải hồ sơ/fallback và phân trang lịch 
 Tất cả/Lost/Found cho bài đăng và Tất cả/Bài đăng/Tài khoản/Hội thoại cho báo cáo.
 Các lựa chọn dùng `type` của `GET /admin/posts` và `GET /admin/reports` đã có,
 kết hợp với `q` và `status`. Đổi loại đưa về trang đầu; chọn Tất cả bỏ `type`,
-Xóa bộ lọc xóa cả loại/từ khóa/trạng thái và đặt lại phân trang. Users và Actions
-không có nhóm loại này. Khi tải lại dữ liệu, vùng catalog có trạng thái bận;
+Xóa bộ lọc xóa cả loại/từ khóa/trạng thái và đặt lại phân trang. Users không có
+nhóm loại; bộ lọc Actions dùng `target_type` và có trạng thái riêng như ghi ở đầu
+tài liệu. Khi tải lại dữ liệu, vùng catalog có trạng thái bận;
 lỗi/thử lại không làm mất loại đang chọn. Không đổi hợp đồng hoặc quyền API.
 Hồi quy local đạt 28 test và build TypeScript/Vite (một probe chẩn đoán cũ
 được bỏ qua), gồm kiểm tra bàn phím, nút ít nhất 44px và bố trí
