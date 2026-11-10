@@ -7,6 +7,13 @@ bans. Post and user lists support independent moderation with required reasons.
 Only directly reported conversations expose message inspection and locking;
 image messages are identified as images without displaying attachments.
 
+Reported conversations show public sender handles, with sender IDs as a fallback
+when a profile is unavailable. Messages run from oldest to newest across loaded
+pages; the reporter's messages appear on the right and system notices in the
+center. Public handles are read from `profiles` only after message inspection;
+private message reads still go through the audited admin API. This change is
+locally verified and has not yet been merged or verified on Render.
+
 The user now owns C's web scope; Android ownership is separate. Web design uses
 `ui-ux-pro-max` when available and follows the functions in the
 [team Figma](https://www.figma.com/design/oq27gMLy9XfXWTeerrGQqy/LTTBDD-L-F?node-id=0-1),

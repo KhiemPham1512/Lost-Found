@@ -211,6 +211,7 @@ export function ReportDetail({ id, back }: { id: string; back: () => void }) {
               <ReportedMessages
                 conversationId={conversation.id}
                 reportId={id}
+                reporterId={report.reporter.id}
               />
             </>
           )}
