@@ -9,7 +9,7 @@ này đã được kiểm tra cục bộ. Tin nhắn ảnh chỉ
 hiển thị loại tin nhắn, chưa mở tệp đính kèm. Với báo cáo hội thoại, khóa tài khoản
 thành viên thực hiện từ danh sách người dùng.
 
-**Hội thoại bị báo cáo trên admin web (local, 10/11/2026):** tin nhắn hiển thị
+**Hội thoại bị báo cáo trên admin web (đã kiểm chứng live, 10/11/2026):** tin nhắn hiển thị
 handle công khai tra từ `profiles.id = sender_id`; khi chưa tải được hoặc không
 còn hồ sơ thì hiển thị ID, không suy đoán người gửi. Tin của người báo cáo ở bên
 phải, người còn lại ở bên trái, tin hệ thống ở giữa; các trang đã tải được ghép
@@ -17,9 +17,16 @@ theo ID tăng dần để đọc từ cũ đến mới. API vẫn trả mới nh
 `before_id` khi tải lịch sử. Giữ bước bấm xem và audit hiện có, không đọc tin
 nhắn trực tiếp qua Supabase, không thêm quyền hoặc trường API. Figma có nhãn
 tin nhắn bị báo cáo riêng nhưng hợp đồng hiện chỉ báo cáo cả hội thoại, nên
-không hiển thị nhãn suy đoán. Chưa merge hoặc kiểm chứng bản thay đổi trên Render.
+không hiển thị nhãn suy đoán. PR #33 đã merge; Render admin xác nhận merge SHA
+`45620acf63c5036d5667c4b2042f4ecb07773f1d` ở trạng thái `live`
+(`dep-dbpgoqu7bikc73djaigg`, hoàn tất 12:22:21 UTC ngày 10/11).
+Smoke trình duyệt trên website triển khai với tài khoản QA thật đã đạt: chỉ tải
+tin sau khi bấm xem, 7 tin từ 2 người gửi có đúng handle/nội dung và thứ tự,
+đăng xuất thành công. Bố cục 375/768/1024/1440px không tràn ngang, không lỗi
+JavaScript chưa xử lý. Lỗi tải hồ sơ/fallback và phân trang lịch sử nhiều trang
+được kiểm tra local; hội thoại QA live này chỉ có 7 tin.
 
-**Bộ lọc loại theo Figma (local, 05/11/2026):** admin-web có nhóm chọn
+**Bộ lọc loại theo Figma (đã kiểm chứng live, 10/11/2026):** admin-web có nhóm chọn
 Tất cả/Lost/Found cho bài đăng và Tất cả/Bài đăng/Tài khoản/Hội thoại cho báo cáo.
 Các lựa chọn dùng `type` của `GET /admin/posts` và `GET /admin/reports` đã có,
 kết hợp với `q` và `status`. Đổi loại đưa về trang đầu; chọn Tất cả bỏ `type`,
@@ -28,7 +35,22 @@ không có nhóm loại này. Khi tải lại dữ liệu, vùng catalog có tr�
 lỗi/thử lại không làm mất loại đang chọn. Không đổi hợp đồng hoặc quyền API.
 Hồi quy local đạt 28 test và build TypeScript/Vite (một probe chẩn đoán cũ
 được bỏ qua), gồm kiểm tra bàn phím, nút ít nhất 44px và bố trí
-375/768/1024/1440px. Auth/API được kiểm soát; bộ lọc mới chưa kiểm chứng trên live.
+375/768/1024/1440px. Các test này kiểm soát Auth/API.
+Smoke riêng trên website live với Auth/API thật kiểm tra Lost/Found và ba loại
+báo cáo, kết hợp tìm kiếm/trạng thái, đối chiếu loại/trạng thái từng mục API trả
+về và xóa bộ lọc. Sau khi tạo thêm 11 bài và 11 báo cáo có nhãn QA theo yêu cầu,
+danh sách có 27 bài/21 báo cáo: trang 2 trả 7 bài/1 báo cáo, không trùng ID với
+trang 1; đổi loại từ trang 2 gửi `offset=0`. Hai catalog không tràn ngang tại
+375/768/1024/1440px, không lỗi JavaScript chưa xử lý; đăng xuất thành công.
+Dữ liệu QA được giữ để truy vết và đang được tính vào thống kê (bài mới
+`ACTIVE`, báo cáo mới `PENDING`). Không cố gây lỗi dịch vụ live để kiểm tra retry.
+
+**Phạm vi đã xác nhận:** các kiểm chứng trên áp dụng cho admin-web và API,
+không xác nhận tích hợp Android/thiết bị hoặc toàn bộ chức năng Figma. Figma
+hiện có danh sách bài/người dùng và chi tiết báo cáo; chưa có frame chi tiết
+riêng cho bài/người dùng admin. Hợp đồng bên dưới cũng chưa có GET chi tiết
+riêng cho hai catalog này; không dùng frame chi tiết mobile để suy ra API admin.
+Các snapshot ngày 05/11 bên dưới là bằng chứng lịch sử, không phải SHA admin hiện tại.
 
 **Bổ sung catalog theo Figma (đã kiểm chứng live, 05/11/2026):** danh sách báo cáo hiển thị
 thêm loại đối tượng, handle người báo cáo và thời gian gửi; bài đăng có danh mục
@@ -336,7 +358,7 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
-#### `GET /posts/{post_id}/claims`
+#### `GET /posts/{post_id}/claims` ✅
 Chủ bài lấy danh sách yêu cầu để đọc câu trả lời và duyệt. Áp dụng cho cả
 `FOUND` và `LOST`; bổ sung đường đọc FastAPI cho màn hình duyệt Android,
 không thay thế đường đọc Supabase/RLS hiện có.
@@ -377,8 +399,16 @@ decision có thể trả `409` theo quy tắc hiện hành.
 
 Lỗi: `401` thiếu/token không hợp lệ · `403` hồ sơ thiếu/bị khóa hoặc không phải
 chủ bài · `404` bài không tồn tại · `422` UUID hoặc phân trang không hợp lệ.
-**Trạng thái:** đã triển khai và kiểm tra HTTP cục bộ trên PostgreSQL test cô
-lập; chưa merge/deploy hoặc kiểm chứng Android/live. Không cần migration.
+**Trạng thái:** PR #32 đã merge vào `develop` (`7c17a85`); API trên Render đã
+được xác nhận triển khai SHA này. Ngày 10/11/2026, Auth thật trên bài Found/Lost
+QA mới đã kiểm tra danh sách rỗng, tạo claim và đọc đúng ID/người gửi/câu trả lời
+(Found có 2 câu hỏi; Lost trả `answers: []`), không có email/phone trong hồ sơ
+claimant, `limit=1&offset=1` trả trang rỗng và giữ `total=1`. Chủ bài đọc được;
+claimant/admin không phải chủ bài nhận `403`, thiếu token nhận `401`; phân trang
+sai/UUID sai nhận `422`, bài không tồn tại nhận `404`. Chủ bài chấm `FAIL` trên
+Found rồi đọc lại thấy `FAILED`. Đây là smoke live; thứ tự nhiều claim và tài khoản
+bị khóa vẫn dựa trên kiểm thử local. Lượt này chưa kiểm chứng concurrency trên
+live hoặc tích hợp Android/thiết bị. Không cần migration.
 
 #### `POST /claims/{claim_id}/decision` ✅
 **Chỉ chủ bài** được gọi. Yêu cầu phải đang ở trạng thái `SUBMITTED`.
