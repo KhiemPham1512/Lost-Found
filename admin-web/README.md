@@ -12,7 +12,12 @@ when a profile is unavailable. Messages run from oldest to newest across loaded
 pages; the reporter's messages appear on the right and system notices in the
 center. Public handles are read from `profiles` only after message inspection;
 private message reads still go through the audited admin API. This change is
-locally verified and has not yet been merged or verified on Render.
+merged in PR #33 and verified on the hosted site with real QA Auth/API on
+2026-11-10: explicit inspection, all seven QA messages with matching handles
+and chronological content, and logout passed. All four viewport widths
+375/768/1024/1440px fit without page runtime errors. Profile failure/fallback
+and multiple message pages remain covered locally, not by this seven-message
+live fixture.
 
 The user now owns C's web scope; Android ownership is separate. Web design uses
 `ui-ux-pro-max` when available and follows the functions in the
@@ -28,7 +33,7 @@ On phones, table rows reflow into labeled records with visible action buttons;
 touch controls are at least 44px high. Keyboard users can skip navigation and
 focus moves to the destination heading. Canceling a moderation dialog restores
 focus to its trigger. These interface changes are verified on the live release,
-now at `a5fdb02` (2026-11-05, PR #26). The backend remains at `37a0405`;
+at `a5fdb02` during the 2026-11-05 check (PR #26). The backend then ran `37a0405`;
 backend application code and SQL scripts are unchanged between these commits.
 
 Additional Figma catalog fields are deployed and verified: report target type,
@@ -67,8 +72,24 @@ Local verification on 2026-11-05 passed all 28 browser tests and TypeScript/Vite
 build (one archived diagnostic is skipped), including type/query/status requests,
 page reset, clearing, error recovery, keyboard/touch and 375/768/1024/1440px
 without overflow or console/page errors in the normal responsive flow. These
-tests control external Auth/API; type-filter additions are not yet verified live.
+tests control external Auth/API. A separate real Auth/API smoke on 2026-11-10
+verified each type, combined search/status, returned item types/statuses, and
+reset. With the user's authorized extra QA data, catalogs contain 27 posts and
+21 reports: page two returns seven posts and one report without IDs overlapping
+page one; changing type from page two sends offset zero. Both catalogs fit all
+four viewport widths without page runtime errors; logout passed. Live outage
+and retry behavior was not induced.
 No endpoint, permission, database or dependency-manifest change is required.
+
+Render confirmed admin merge SHA `45620acf63c5036d5667c4b2042f4ecb07773f1d`
+live on 2026-11-10 (deploy `dep-dbpgoqu7bikc73djaigg`). Earlier SHA references
+above describe the dated checks. The 11 new labeled QA posts/reports are retained
+for verification and affect dashboard counts: posts are ACTIVE, reports PENDING.
+Credentials, helper scripts, result manifests and screenshots remain local.
+
+These checks do not verify Android device integration or full Figma parity.
+Figma has admin post/user list frames and report details; dedicated admin
+post/user detail frames and generic detail API endpoints are not specified.
 
 ```powershell
 cd admin-web
