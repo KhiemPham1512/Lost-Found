@@ -9,6 +9,16 @@ này đã được kiểm tra cục bộ. Tin nhắn ảnh chỉ
 hiển thị loại tin nhắn, chưa mở tệp đính kèm. Với báo cáo hội thoại, khóa tài khoản
 thành viên thực hiện từ danh sách người dùng.
 
+**Hội thoại bị báo cáo trên admin web (local, 10/11/2026):** tin nhắn hiển thị
+handle công khai tra từ `profiles.id = sender_id`; khi chưa tải được hoặc không
+còn hồ sơ thì hiển thị ID, không suy đoán người gửi. Tin của người báo cáo ở bên
+phải, người còn lại ở bên trái, tin hệ thống ở giữa; các trang đã tải được ghép
+theo ID tăng dần để đọc từ cũ đến mới. API vẫn trả mới nhất trước và dùng
+`before_id` khi tải lịch sử. Giữ bước bấm xem và audit hiện có, không đọc tin
+nhắn trực tiếp qua Supabase, không thêm quyền hoặc trường API. Figma có nhãn
+tin nhắn bị báo cáo riêng nhưng hợp đồng hiện chỉ báo cáo cả hội thoại, nên
+không hiển thị nhãn suy đoán. Chưa merge hoặc kiểm chứng bản thay đổi trên Render.
+
 **Bộ lọc loại theo Figma (local, 05/11/2026):** admin-web có nhóm chọn
 Tất cả/Lost/Found cho bài đăng và Tất cả/Bài đăng/Tài khoản/Hội thoại cho báo cáo.
 Các lựa chọn dùng `type` của `GET /admin/posts` và `GET /admin/reports` đã có,

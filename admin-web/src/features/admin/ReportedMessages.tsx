@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -17,9 +22,11 @@ type MessagePage = {
 export function ReportedMessages({
   conversationId,
   reportId,
+  reporterId,
 }: {
   conversationId: string;
   reportId: string;
+  reporterId: string;
 }) {
   const [inspecting, setInspecting] = useState(false);
   const cache = useQueryClient();
@@ -40,6 +47,27 @@ export function ReportedMessages({
       page.messages.length === 100
         ? Math.min(...page.messages.map((message) => message.id))
         : undefined,
+  });
+  const items = messages.data?.pages.flatMap((page) => page.messages) ?? [];
+  const senderIds = [
+    ...new Set(
+      items.flatMap((message) =>
+        message.sender_id ? [message.sender_id] : [],
+      ),
+    ),
+  ].sort();
+  const senders = useQuery({
+    queryKey: ["message-senders", conversationId, senderIds],
+    enabled: inspecting && senderIds.length > 0,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,username")
+        .in("id", senderIds)
+        .abortSignal(AbortSignal.any([signal, AbortSignal.timeout(15000)]));
+      if (error) throw error;
+      return data;
+    },
   });
   return (
     <section className="panel">
@@ -66,23 +94,55 @@ export function ReportedMessages({
         <p role="status">Đang tải tin nhắn…</p>
       ) : (
         <>
-          <ul className="audit-list mt-4">
-            {messages.data.pages
-              .flatMap((page) => page.messages)
+          {senderIds.length > 0 && senders.isPending && (
+            <p className="muted mt-4" role="status">
+              Đang tải tên người gửi…
+            </p>
+          )}
+          {senders.isError && (
+            <p className="muted mt-4" role="status">
+              Chưa tải được tên người gửi. Đang hiển thị ID.
+              <Button variant="outline" onClick={() => void senders.refetch()}>
+                Thử lại tên người gửi
+              </Button>
+            </p>
+          )}
+          <ol
+            className="reported-messages mt-4"
+            aria-label="Tin nhắn từ cũ đến mới"
+          >
+            {items
+              .sort((a, b) => a.id - b.id)
               .map((message) => (
-                <li key={message.id}>
-                  <small>
-                    {message.sender_id ? "Thành viên hội thoại" : "Hệ thống"} ·{" "}
-                    {new Date(message.created_at).toLocaleString("vi-VN")}
-                  </small>
-                  <p className="detail-copy">
+                <li
+                  key={message.id}
+                  className={
+                    !message.sender_id
+                      ? "message-system"
+                      : message.sender_id === reporterId
+                        ? "message-reporter"
+                        : ""
+                  }
+                >
+                  <p className="detail-copy message-bubble">
                     {message.type === "IMAGE"
                       ? "Tin nhắn ảnh"
                       : message.content || "—"}
                   </p>
+                  <small>
+                    {message.sender_id
+                      ? (senders.data?.find(
+                          (sender) => sender.id === message.sender_id,
+                        )?.username ?? `ID: ${message.sender_id}`)
+                      : "Hệ thống"}{" "}
+                    ·{" "}
+                    <time dateTime={message.created_at}>
+                      {new Date(message.created_at).toLocaleString("vi-VN")}
+                    </time>
+                  </small>
                 </li>
               ))}
-          </ul>
+          </ol>
           {!messages.data.pages[0].messages.length && (
             <p className="muted mt-4">Chưa có tin nhắn.</p>
           )}

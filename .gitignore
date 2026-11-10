@@ -94,6 +94,7 @@ Desktop.ini
 
 # Local working notes and visual QA artifacts; never publish with source.
 .local-artifacts/
+.codegraph/
 
 # Shared AI instructions are versioned; skills and local verification stay local.
 /.agents/

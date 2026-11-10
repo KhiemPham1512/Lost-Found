@@ -763,6 +763,48 @@ textarea {
   display: block;
   margin-top: 4px;
 }
+.reported-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  list-style: none;
+  padding: 0;
+}
+.reported-messages li {
+  align-self: flex-start;
+  max-width: 85%;
+  min-width: 0;
+}
+.message-bubble {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 9px 12px;
+  background: var(--card);
+}
+.reported-messages small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.reported-messages .message-reporter {
+  align-self: flex-end;
+}
+.message-reporter .message-bubble {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.message-reporter small {
+  text-align: right;
+}
+.reported-messages .message-system {
+  align-self: center;
+  text-align: center;
+}
+.message-system .message-bubble {
+  background: var(--muted);
+}
 .moderation-dialog {
   margin: auto;
   width: min(460px, calc(100% - 32px));
