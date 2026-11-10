@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ReportedImage } from "./ReportedImage";
 
 type MessagePage = {
   messages: {
@@ -29,6 +30,7 @@ export function ReportedMessages({
   reporterId: string;
 }) {
   const [inspecting, setInspecting] = useState(false);
+  const [imageId, setImageId] = useState<number>();
   const cache = useQueryClient();
   const messages = useInfiniteQuery({
     queryKey: ["reported-messages", conversationId],
@@ -125,9 +127,17 @@ export function ReportedMessages({
                   }
                 >
                   <p className="detail-copy message-bubble">
-                    {message.type === "IMAGE"
-                      ? "Tin nhắn ảnh"
-                      : message.content || "—"}
+                    {message.type === "IMAGE" ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => setImageId(message.id)}
+                        aria-label={`Xem ảnh tin nhắn ${message.id}`}
+                      >
+                        Xem ảnh
+                      </Button>
+                    ) : (
+                      message.content || "—"
+                    )}
                   </p>
                   <small>
                     {message.sender_id
@@ -157,6 +167,14 @@ export function ReportedMessages({
             </Button>
           )}
         </>
+      )}
+      {imageId !== undefined && (
+        <ReportedImage
+          conversationId={conversationId}
+          messageId={imageId}
+          reportId={reportId}
+          close={() => setImageId(undefined)}
+        />
       )}
     </section>
   );
