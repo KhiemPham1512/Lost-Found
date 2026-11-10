@@ -199,3 +199,8 @@ class ModeratedUserResponse(BaseModel):
 class LockedConversationResponse(BaseModel):
     id: UUID
     is_locked: bool
+
+
+class AdminImageResponse(BaseModel):
+    url: str
+    expires_in: int

@@ -5,9 +5,24 @@ banned accounts, dashboard, filtered reports/posts/users and audit history.
 Report details support review and resolution, including post removal and account
 bans. Post and user lists support independent moderation with required reasons.
 Only directly reported conversations expose message inspection and locking;
-image messages are identified as images without displaying attachments.
+image attachment viewing is implemented on the current feature branch below.
 
-Current feature branch (not yet merged/deployed) adds independent post/user
+Current feature branch (not yet merged/deployed) adds explicit image viewing for
+directly reported conversations. The backend checks the stored message/path and
+issues a 60-second URL for the private chat-images bucket, logging each grant.
+The viewer supports loading/error/retry, expiry/reload, Escape/close and focus
+restoration; URLs are not persisted and query data is discarded on close. It
+never loads message-provided URLs directly. Requires the reviewed Storage SQL
+patch before use; that patch is not applied to live yet. Existing public post
+images are unaffected. Android sending-image integration remains separate.
+
+Local verification: 122 backend tests passed on isolated PostgreSQL; mypy
+checked 34 files; 43 browser tests passed with two pre-existing skips; the
+TypeScript/Vite build passed. Image tests cover guarded signing, Storage RLS,
+explicit opening, loading errors, retry, expiry, focus and four viewport sizes.
+Real Storage signing/upload and hosted image viewing remain unverified.
+
+PR #36 (merged and deployed) adds independent post/user
 details through admin-only GET `/admin/posts/{id}` and `/admin/users/{id}`.
 Lists retain their moderation buttons and add View, including inactive posts
 and admin profiles. Returning retains search/filter/page and restores focus;
@@ -21,7 +36,10 @@ files; 41 browser tests passed with two pre-existing skips; TypeScript/Vite buil
 passed. New detail/navigation/moderation/error/nullable-data flows and
 375/768/1024/1440px layouts were checked, including long text without horizontal
 overflow. Browser Auth/API responses are controlled; new endpoints are not yet
-verified live. Tests, screenshots and helpers remain local.
+verified in all variants live. Hosted QA Auth smoke passed post -> author ->
+post -> original query and logout, with both GETs returning 200, no raw phone/email or page
+errors, and 375/1440px fit. Render confirmed both services live on
+7a2aae4a5c50967b281adbb891040f135a792948. Tests, screenshots and helpers remain local.
 
 PR #35 (merged and deployed) completes existing admin data:
 audit history gains All/Post/User/Conversation filtering through the existing

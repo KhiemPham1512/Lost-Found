@@ -19,6 +19,16 @@ Khi ai đó hỏi "sao lại làm vậy?" thì mở file này. Các dòng dướ
 | 13 | Họp ngắn mỗi ngày, buổi tích hợp vào ngày 7, 14, 21, 28 | Theo kế hoạch 30 ngày | ☐ |
 
 ## Phân công
+
+### Ảnh chat riêng tư và viewer admin (nhánh feature, chưa áp dụng live)
+
+Ảnh tin nhắn dùng bucket `chat-images` riêng tư, path theo conversation và người
+gửi; không dùng bucket ảnh bài đăng công khai. Thành viên upload/đọc theo RLS;
+admin không thuộc chat chỉ lấy link tạm qua FastAPI sau khi có report trực tiếp.
+Mỗi lần cấp link ghi `VIEW_CONVERSATION`, không bổ sung quyền đọc chat từ report
+POST/USER. Đây là contract bổ sung cho `messages.image_path` hiện có, không đổi
+luồng xác minh hay hoàn tất. Chi tiết path, TTL và SQL patch ở `docs/api.md`.
+
 ### Đường đọc danh sách yêu cầu cho chủ bài (07/11/2026)
 
 Bổ sung `GET /posts/{post_id}/claims` làm đường đọc FastAPI cho màn hình duyệt

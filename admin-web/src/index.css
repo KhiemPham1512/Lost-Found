@@ -823,6 +823,10 @@ textarea {
 .moderation-dialog::backdrop {
   background: #102e3980;
 }
+.moderation-dialog.chat-image-dialog {
+  width: min(960px, calc(100% - 32px));
+  max-height: 90dvh;
+}
 .moderation-dialog h2 {
   font-size: 20px;
   font-weight: 650;
