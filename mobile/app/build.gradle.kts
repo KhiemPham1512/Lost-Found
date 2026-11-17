@@ -16,6 +16,12 @@ val localProperties = Properties().apply {
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL", "")
 val supabasePublishableKey =
     localProperties.getProperty("SUPABASE_PUBLISHABLE_KEY", "")
+// Địa chỉ FastAPI. Mặc định là bản đang chạy trên Render.
+// Chạy backend trên máy tính + máy ảo: đặt API_BASE_URL=http://10.0.2.2:8000 trong local.properties.
+val apiBaseUrl = localProperties.getProperty(
+    "API_BASE_URL",
+    "https://lost-found-api-ph8v.onrender.com"
+)
 
 android {
     namespace = "com.lostfound.app"
@@ -43,6 +49,12 @@ android {
             "String",
             "SUPABASE_PUBLISHABLE_KEY",
             "\"$supabasePublishableKey\""
+        )
+
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"$apiBaseUrl\""
         )
     }
 
@@ -75,6 +87,15 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
+    // Phần B: điều hướng, ViewModel, icon, mạng, ảnh, vị trí
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.okhttp)
+    implementation(libs.coil.compose)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
 

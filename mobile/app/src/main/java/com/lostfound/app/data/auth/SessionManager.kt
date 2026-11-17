@@ -1,30 +1,44 @@
 package com.lostfound.app.data.auth
 
+import com.lostfound.app.core.session.Session
+import com.lostfound.app.core.session.SessionStore
+
+/**
+ * Giữ nguyên các hàm cũ để code của C không phải sửa, nhưng phiên giờ được lưu bền
+ * trên máy và tự làm mới qua [SessionStore] (tầng core của B).
+ */
 object SessionManager {
 
-    private var currentSession: AuthSession? = null
-
     fun saveSession(session: AuthSession) {
-        currentSession = session
+        SessionStore.save(
+            Session(
+                accessToken = session.accessToken,
+                refreshToken = session.refreshToken,
+                userId = session.userId,
+                email = session.email,
+                expiresAt = System.currentTimeMillis() / 1000 + 3600
+            )
+        )
     }
 
+    /** Token hiện có (có thể đã hết hạn). Code mới nên dùng SessionStore.requireToken(). */
     fun getAccessToken(): String? {
-        return currentSession?.accessToken
+        return SessionStore.current?.accessToken
     }
 
     fun getCurrentUserId(): String? {
-        return currentSession?.userId
+        return SessionStore.userId
     }
 
     fun getCurrentEmail(): String? {
-        return currentSession?.email
+        return SessionStore.current?.email
     }
 
     fun isLoggedIn(): Boolean {
-        return currentSession != null
+        return SessionStore.current != null
     }
 
     fun clearSession() {
-        currentSession = null
+        SessionStore.clear()
     }
 }
