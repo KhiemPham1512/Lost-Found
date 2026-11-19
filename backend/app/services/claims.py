@@ -9,6 +9,44 @@ from app.schemas.claims import ClaimCreate, DecisionRequest
 MAX_ATTEMPTS = 2  # số lần bị Fail hoặc tự hủy tối đa trên một bài
 
 
+def list_claims(
+    conn: psycopg.Connection, user_id: str, post_id: UUID, limit: int, offset: int
+) -> dict:
+    post = conn.execute(
+        "select author_id from public.posts where id = %s", (post_id,)
+    ).fetchone()
+    if post is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bài đăng")
+    if str(post[0]) != user_id:
+        raise HTTPException(status_code=403, detail="Chỉ chủ bài mới được xem yêu cầu")
+    # One statement keeps the count, page and answers on the same snapshot.
+    row = require_row(
+        conn.execute(
+            """with page as (
+            select c.id, c.claimant_id, c.status, c.created_at
+            from public.claims c where c.post_id = %s
+            order by c.created_at desc, c.id desc limit %s offset %s
+        )
+        select (select count(*) from public.claims where post_id = %s),
+            coalesce(jsonb_agg(jsonb_build_object(
+                'claim_id', c.id, 'status', c.status, 'created_at', c.created_at,
+                'claimant', jsonb_build_object('id', p.id, 'username', p.username,
+                    'display_name', p.display_name, 'avatar_url', p.avatar_url),
+                'answers', (select coalesce(jsonb_agg(jsonb_build_object(
+                    'question_id', q.id, 'position', q.position,
+                    'question_text', q.question_text, 'answer_text', a.answer_text
+                ) order by q.position, q.id), '[]'::jsonb)
+                from public.claim_answers a
+                join public.verification_questions q on q.id = a.question_id
+                where a.claim_id = c.id)
+            ) order by c.created_at desc, c.id desc), '[]'::jsonb)
+        from page c join public.profiles p on p.id = c.claimant_id""",
+            (post_id, limit, offset, post_id),
+        ).fetchone()
+    )
+    return {"total": row[0], "items": row[1]}
+
+
 def _check_can_claim(conn: psycopg.Connection, user_id: str, post_id: UUID) -> int:
     """Kiểm tra người này có được phép xác minh bài này không. Trả về số lượt còn lại."""
     post = conn.execute(

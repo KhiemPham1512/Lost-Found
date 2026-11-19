@@ -3,22 +3,107 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
+**Ảnh hội thoại admin (nhánh feature, chưa merge/deploy):** sau khi bấm xem tin
+nhắn, admin có thể bấm Xem ảnh trên tin `IMAGE`. Viewer tải ảnh riêng tư qua
+link ngắn hạn do backend cấp, có loading/lỗi/thử lại, đóng/Escape và trả focus.
+Hết phiên xem thì ẩn ảnh, cần bấm tải lại để kiểm tra quyền và cấp link mới.
+Phần này cần SQL patch bucket `chat-images` riêng tư; chưa áp dụng trên live.
+Không dùng bucket ảnh bài đăng công khai để lưu ảnh chat. Contract chi tiết ở
+mục 3.7 và Storage ở mục 4.5. Figma tiếp tục được hoãn.
+
+Kiểm chứng local: 122 test backend trên PostgreSQL cô lập đạt, mypy 34 file;
+43 test browser đạt, 2 probe cũ bỏ qua; build TypeScript/Vite đạt. Có kiểm tra
+quyền/path/ký URL giả lập, RLS Storage, lỗi/thử lại/hết hạn/focus và giao diện
+375/768/1024/1440px. Chưa xác nhận upload/ký URL Storage thật hoặc viewer hosted.
+
+**Chi tiết catalog admin (PR #36 đã merge/deploy):** danh sách bài và
+người dùng có nút Xem riêng bên cạnh kiểm duyệt. Mở bài → xem người đăng → quay
+lại giữ danh sách/từ khóa/bộ lọc/trang và trả focus về nút Xem; nếu bản ghi không
+còn khớp bộ lọc sau kiểm duyệt thì focus về tiêu đề danh sách. Chi tiết báo cáo
+cũng mở được hồ sơ người bị báo cáo/người đăng. Hai đường đọc mới ở mục 3.7 chỉ
+cho admin còn hoạt động, không cấp quyền chat hay đọc câu trả lời xác minh.
+Figma được hoãn theo yêu cầu người dùng; dùng teal/Geist và component hiện có.
+Kiểm chứng local: 98 test backend trên PostgreSQL cô lập, mypy 34 file,
+41 test browser đạt và 2 probe/thử nghiệm cũ được bỏ qua; build TypeScript/Vite
+đạt. Browser kiểm soát external Auth/API, có kiểm tra điều hướng/quay lại,
+kiểm duyệt/lỗi/thử lại và 375/768/1024/1440px kể cả nội dung dài. Không có thay
+đổi dữ liệu live trong phần triển khai chi tiết. Render xác nhận frontend/backend
+live ở `7a2aae4a5c50967b281adbb891040f135a792948`. Smoke với QA Auth thật đã mở
+bài, xem người đăng, quay lại giữ tìm kiếm và đăng xuất; hai GET trả `200`, không
+trả email/SĐT đầy đủ; user detail ở 375/1440px không tràn ngang hoặc lỗi JavaScript.
+
+**Hoàn thiện chức năng admin (PR #35 đã merge/deploy):** Nhật ký có
+bộ lọc Tất cả/Bài đăng/Tài khoản/Hội thoại, gửi `target_type` tới API hiện có,
+kết hợp từ khóa/khoảng thời gian; đổi loại về trang đầu, Tất cả bỏ điều kiện,
+Xóa bộ lọc xóa cả loại/từ khóa/khoảng thời gian. Dashboard bổ sung tên đối tượng
+và thời gian gửi trong báo cáo mới nhất; phần này dùng bố cục bản ghi dọc trên
+màn hình nhỏ. Chi tiết báo cáo bài hiển thị thêm loại, danh mục, tag, thời gian
+mất/nhặt, ngày đăng và tháng tham gia của người đăng từ response hiện có.
+`GET /admin/stats` bổ sung `recent_reports[].target_label`: tiêu đề bài, handle
+tài khoản hoặc hai handle của hội thoại (`a ↔ b`), cùng cách đặt tên như danh
+sách báo cáo. Các trường/metric cũ và thứ tự năm báo cáo mới nhất giữ nguyên.
+Không thêm endpoint, quyền, trạng thái hoặc thay đổi database. Đây chưa phải
+màn chi tiết bài/người dùng độc lập hay chức năng mở ảnh trong chat.
+Kiểm chứng local ngày 10/11/2026: 35 test browser đạt, 2 probe/thử nghiệm cũ
+được bỏ qua; build TypeScript/Vite và diff-check đạt. Bốn kích thước
+375/768/1024/1440px không tràn viewport hoặc bảng ở các phần thay đổi. Test
+kiểm soát external Auth/API. Render đã xác nhận cả frontend/backend live ở
+`4bc7a598bcc843f496a2c341f53e552b925bc343`. Smoke Auth thật ngày 10/11/2026
+trả đủ `target_label` cho 5 báo cáo mới nhất; chưa chạy browser live riêng cho
+các thay đổi UI của PR #35. Sửa Figma được hoãn theo yêu cầu người dùng.
+Backend đạt 87 test trên PostgreSQL test cô lập và mypy 34 file; kiểm tra HTTP
+đối chiếu nhãn đối tượng thống kê cho cả POST/USER/CONVERSATION. Không cần migration.
+
 Admin-web có dashboard, bộ lọc danh sách, chi tiết và xử lý báo cáo, gỡ/khôi phục
 bài, khóa/mở khóa tài khoản và xem/khóa hội thoại bị báo cáo trực tiếp. Các luồng
-này đã được kiểm tra cục bộ. Tin nhắn ảnh chỉ
-hiển thị loại tin nhắn, chưa mở tệp đính kèm. Với báo cáo hội thoại, khóa tài khoản
+này đã được kiểm tra cục bộ. Viewer ảnh mới đang trên nhánh feature, chưa live.
+Với báo cáo hội thoại, khóa tài khoản
 thành viên thực hiện từ danh sách người dùng.
 
-**Bộ lọc loại theo Figma (local, 05/11/2026):** admin-web có nhóm chọn
+**Hội thoại bị báo cáo trên admin web (đã kiểm chứng live, 10/11/2026):** tin nhắn hiển thị
+handle công khai tra từ `profiles.id = sender_id`; khi chưa tải được hoặc không
+còn hồ sơ thì hiển thị ID, không suy đoán người gửi. Tin của người báo cáo ở bên
+phải, người còn lại ở bên trái, tin hệ thống ở giữa; các trang đã tải được ghép
+theo ID tăng dần để đọc từ cũ đến mới. API vẫn trả mới nhất trước và dùng
+`before_id` khi tải lịch sử. Giữ bước bấm xem và audit hiện có, không đọc tin
+nhắn trực tiếp qua Supabase, không thêm quyền hoặc trường API. Figma có nhãn
+tin nhắn bị báo cáo riêng nhưng hợp đồng hiện chỉ báo cáo cả hội thoại, nên
+không hiển thị nhãn suy đoán. PR #33 đã merge; Render admin xác nhận merge SHA
+`45620acf63c5036d5667c4b2042f4ecb07773f1d` ở trạng thái `live`
+(`dep-dbpgoqu7bikc73djaigg`, hoàn tất 12:22:21 UTC ngày 10/11).
+Smoke trình duyệt trên website triển khai với tài khoản QA thật đã đạt: chỉ tải
+tin sau khi bấm xem, 7 tin từ 2 người gửi có đúng handle/nội dung và thứ tự,
+đăng xuất thành công. Bố cục 375/768/1024/1440px không tràn ngang, không lỗi
+JavaScript chưa xử lý. Lỗi tải hồ sơ/fallback và phân trang lịch sử nhiều trang
+được kiểm tra local; hội thoại QA live này chỉ có 7 tin.
+
+**Bộ lọc loại theo Figma (đã kiểm chứng live, 10/11/2026):** admin-web có nhóm chọn
 Tất cả/Lost/Found cho bài đăng và Tất cả/Bài đăng/Tài khoản/Hội thoại cho báo cáo.
 Các lựa chọn dùng `type` của `GET /admin/posts` và `GET /admin/reports` đã có,
 kết hợp với `q` và `status`. Đổi loại đưa về trang đầu; chọn Tất cả bỏ `type`,
-Xóa bộ lọc xóa cả loại/từ khóa/trạng thái và đặt lại phân trang. Users và Actions
-không có nhóm loại này. Khi tải lại dữ liệu, vùng catalog có trạng thái bận;
+Xóa bộ lọc xóa cả loại/từ khóa/trạng thái và đặt lại phân trang. Users không có
+nhóm loại; bộ lọc Actions dùng `target_type` và có trạng thái riêng như ghi ở đầu
+tài liệu. Khi tải lại dữ liệu, vùng catalog có trạng thái bận;
 lỗi/thử lại không làm mất loại đang chọn. Không đổi hợp đồng hoặc quyền API.
 Hồi quy local đạt 28 test và build TypeScript/Vite (một probe chẩn đoán cũ
 được bỏ qua), gồm kiểm tra bàn phím, nút ít nhất 44px và bố trí
-375/768/1024/1440px. Auth/API được kiểm soát; bộ lọc mới chưa kiểm chứng trên live.
+375/768/1024/1440px. Các test này kiểm soát Auth/API.
+Smoke riêng trên website live với Auth/API thật kiểm tra Lost/Found và ba loại
+báo cáo, kết hợp tìm kiếm/trạng thái, đối chiếu loại/trạng thái từng mục API trả
+về và xóa bộ lọc. Sau khi tạo thêm 11 bài và 11 báo cáo có nhãn QA theo yêu cầu,
+danh sách có 27 bài/21 báo cáo: trang 2 trả 7 bài/1 báo cáo, không trùng ID với
+trang 1; đổi loại từ trang 2 gửi `offset=0`. Hai catalog không tràn ngang tại
+375/768/1024/1440px, không lỗi JavaScript chưa xử lý; đăng xuất thành công.
+Dữ liệu QA được giữ để truy vết và đang được tính vào thống kê (bài mới
+`ACTIVE`, báo cáo mới `PENDING`). Không cố gây lỗi dịch vụ live để kiểm tra retry.
+
+**Phạm vi đã xác nhận:** các kiểm chứng trên áp dụng cho admin-web và API,
+không xác nhận tích hợp Android/thiết bị hoặc toàn bộ chức năng Figma. Figma
+hiện có danh sách bài/người dùng và chi tiết báo cáo; chưa có frame chi tiết
+riêng cho bài/người dùng admin. Hai GET chi tiết được bổ sung qua PR #36
+theo phạm vi người dùng giao và đã có smoke live; không dùng frame chi tiết mobile
+để suy ra quyền hoặc các trường riêng tư cho API admin.
+Các snapshot ngày 05/11 bên dưới là bằng chứng lịch sử, không phải SHA admin hiện tại.
 
 **Bổ sung catalog theo Figma (đã kiểm chứng live, 05/11/2026):** danh sách báo cáo hiển thị
 thêm loại đối tượng, handle người báo cáo và thời gian gửi; bài đăng có danh mục
@@ -326,6 +411,58 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
+#### `GET /posts/{post_id}/claims` ✅
+Chủ bài lấy danh sách yêu cầu để đọc câu trả lời và duyệt. Áp dụng cho cả
+`FOUND` và `LOST`; bổ sung đường đọc FastAPI cho màn hình duyệt Android,
+không thay thế đường đọc Supabase/RLS hiện có.
+
+Chỉ chủ bài có hồ sơ còn hoạt động được gọi; claimant và admin không phải chủ
+bài nhận `403`. Không trả email, số điện thoại hoặc dữ liệu riêng tư khác.
+Trả mọi trạng thái claim, kể cả lịch sử khi bài không còn `ACTIVE`; đọc danh
+sách không cấp quyền duyệt bài đã ngừng hoạt động.
+
+Query: `limit` mặc định 20, từ 1–100; `offset` mặc định 0, tối thiểu 0.
+Sắp xếp `created_at DESC, claim_id DESC`; câu trả lời theo `position ASC`.
+`total` là tổng yêu cầu thuộc bài, không phải số phần tử của trang.
+```json
+{
+  "total": 1,
+  "items": [{
+    "claim_id": "c1...",
+    "claimant": {
+      "id": "u1...", "username": "thulan_k",
+      "display_name": "Thu Lan", "avatar_url": null
+    },
+    "status": "SUBMITTED",
+    "created_at": "2026-11-07T01:00:00Z",
+    "answers": [{
+      "question_id": "a1...", "position": 1,
+      "question_text": "Mặt trong ví có họa tiết gì?",
+      "answer_text": "Họa tiết lá"
+    }]
+  }]
+}
+```
+Không có yêu cầu hoặc vượt trang cuối: `items: []` (vẫn giữ `total`).
+Lost không có câu hỏi: `answers: []`. `display_name`/`avatar_url` có thể null.
+Android lấy `claim_id` của mục `SUBMITTED` để gọi decision bên dưới;
+`PASS`/`FAIL` trả trạng thái `PASSED`/`FAILED`, không dùng hai giá trị decision
+làm trạng thái hiển thị. Tải lại danh sách sau quyết định; nếu dữ liệu đã đổi,
+decision có thể trả `409` theo quy tắc hiện hành.
+
+Lỗi: `401` thiếu/token không hợp lệ · `403` hồ sơ thiếu/bị khóa hoặc không phải
+chủ bài · `404` bài không tồn tại · `422` UUID hoặc phân trang không hợp lệ.
+**Trạng thái:** PR #32 đã merge vào `develop` (`7c17a85`); API trên Render đã
+được xác nhận triển khai SHA này. Ngày 10/11/2026, Auth thật trên bài Found/Lost
+QA mới đã kiểm tra danh sách rỗng, tạo claim và đọc đúng ID/người gửi/câu trả lời
+(Found có 2 câu hỏi; Lost trả `answers: []`), không có email/phone trong hồ sơ
+claimant, `limit=1&offset=1` trả trang rỗng và giữ `total=1`. Chủ bài đọc được;
+claimant/admin không phải chủ bài nhận `403`, thiếu token nhận `401`; phân trang
+sai/UUID sai nhận `422`, bài không tồn tại nhận `404`. Chủ bài chấm `FAIL` trên
+Found rồi đọc lại thấy `FAILED`. Đây là smoke live; thứ tự nhiều claim và tài khoản
+bị khóa vẫn dựa trên kiểm thử local. Lượt này chưa kiểm chứng concurrency trên
+live hoặc tích hợp Android/thiết bị. Không cần migration.
+
 #### `POST /claims/{claim_id}/decision` ✅
 **Chỉ chủ bài** được gọi. Yêu cầu phải đang ở trạng thái `SUBMITTED`.
 ```json
@@ -410,11 +547,72 @@ Người không phải admin gọi các endpoint này nhận `403`. **Mọi hàn
 | `GET /admin/reports?status=&type=&q=&limit=&offset=` | Báo cáo | Danh sách: mã `R-<report_no>`, loại (bài, tài khoản, hội thoại), đối tượng, lý do, handle người báo cáo, thời gian, trạng thái. `status`: `PENDING`, `REVIEWING`, `RESOLVED`, `DISMISSED` | ✅ |
 | `GET /admin/reports/{id}` | Chi tiết báo cáo | Báo cáo, bài hoặc tài khoản bị báo cáo (kèm số bài và số lần bị báo cáo của người đăng), **mọi báo cáo khác về cùng đối tượng**, tóm tắt hội thoại liên quan (số tin, tin cuối), nhật ký xử lý | ✅ |
 | `GET /admin/posts?type=&status=&q=&limit=&offset=` | Bài đăng | Danh sách kèm **số báo cáo** của từng bài | ✅ |
+| `GET /admin/posts/{id}` | Chi tiết bài admin (Figma hoãn) | Các trường danh sách cùng mô tả, địa điểm, thời gian mất/nhặt, tags và đường dẫn ảnh công khai | ✅ |
 | `GET /admin/users?status=&q=&limit=&offset=` | Người dùng | Handle, **số điện thoại đã che** (`09•• ••• 321`), vai trò, tháng tham gia, số bài, số lần bị báo cáo, trạng thái. `status`: `ACTIVE`, `BANNED`, `REPORTED` (bị báo cáo nhiều) | ✅ |
+| `GET /admin/users/{id}` | Chi tiết người dùng admin (Figma hoãn) | Các trường danh sách cùng `avatar_url`, `bio`; luôn giữ SĐT đã che | ✅ |
 | `GET /admin/actions?target_type=&range=&q=` | Nhật ký hoạt động | Thời gian, admin, hành động, đối tượng, mã báo cáo, ghi chú. `range`: `today`, `7d`, `30d` | ✅ |
 | `GET /admin/conversations/{id}/messages?limit=100&before_id=` | Hội thoại bị báo cáo | Tin nhắn của cuộc chat **bị báo cáo**. Mỗi lần gọi **luôn ghi log** `VIEW_CONVERSATION` | ✅ |
+| `GET /admin/conversations/{id}/messages/{message_id}/image` | Viewer ảnh chat (Figma hoãn) | URL ảnh riêng tư 60 giây sau khi kiểm tra report trực tiếp; ghi `VIEW_CONVERSATION` | 🧪 |
 
 Số điện thoại **đầy đủ không bao giờ được trả về** cho admin web; backend chỉ gửi bản đã che.
+
+#### Chi tiết catalog admin: `GET /admin/posts/{id}` và `GET /admin/users/{id}` ✅
+
+Hai endpoint trả một object (không bọc `items`), không có query phân trang:
+
+- **Post:** giữ nguyên các trường `id`, `type`, `title`, `status`, `author_id`,
+  `author_username`, `category_name`, `created_at`, `expires_at`, `report_count`
+  như danh sách. Thêm `description` (nullable), `location_text` (nullable),
+  `event_time` (nullable), `tags` (mảng tên, sắp theo tên), `image_paths` (mảng
+  đường dẫn Storage, theo `sort_order` rồi ID). Hai mảng có thể rỗng. Ảnh dùng
+  bucket công khai `post-images` như mục 4.5. Admin đọc được mọi trạng thái bài,
+  kể cả `DELETED`; quyền gỡ/khôi phục vẫn theo endpoint kiểm duyệt hiện có.
+- **User:** giữ nguyên `id`, `username`, `display_name`, `role`, `is_banned`,
+  `created_at`, `joined_month`, `phone_masked`, `post_count`, `report_count` như
+  danh sách; thêm `avatar_url`, `bio` (đều nullable, dữ liệu hồ sơ công khai).
+  `phone_masked` có thể null; số bài/báo cáo có cùng cách tính với danh sách,
+  gồm cả bài xóa mềm khi tính `post_count`. Admin có thể đọc hồ sơ admin khác,
+  nhưng không mở thêm quyền khóa tài khoản admin.
+
+Chỉ admin có hồ sơ còn hoạt động được gọi. Lỗi: `401` thiếu/token không hợp lệ;
+`403` người thường, hồ sơ thiếu hoặc admin bị khóa; `404` không có đối tượng;
+`422` ID không phải UUID. Không trả email, SĐT đầy đủ, câu hỏi/câu trả lời xác
+minh, claims, nội dung chat hoặc ghi chú báo cáo nội bộ qua hai đường này.
+Các GET không đổi dữ liệu hoặc tạo audit xem mới. Không cần migration.
+Đã kiểm tra HTTP cục bộ trên PostgreSQL test cô lập và smoke Auth thật trên
+bài/hồ sơ QA sau merge PR #36. Các biến thể lỗi/quyền vẫn dựa trên kiểm chứng
+local; không ảnh hưởng contract Android.
+
+#### `GET /admin/conversations/{id}/messages/{message_id}/image` 🧪
+
+Chỉ admin còn hoạt động và hội thoại đã có **báo cáo trực tiếp** được gọi, cùng
+quy tắc với GET messages (kể cả report đã đóng). Report POST/USER liên quan không
+cấp quyền; hội thoại đã khóa vẫn được đọc lịch sử. `message_id` là số nguyên
+dương, tin phải thuộc đúng hội thoại và có `type=IMAGE`.
+
+```json
+{ "url": "https://<project>.supabase.co/storage/v1/object/sign/chat-images/<path>?token=<temporary-token>", "expires_in": 60 }
+```
+
+Response có `Cache-Control: no-store`; khóa server không được trả về. Backend
+lấy `image_path` từ bản ghi tin nhắn, kiểm tra đường dẫn đúng conversation/sender
+và object tồn tại trong bucket riêng tư `chat-images`; không nhận URL/path từ
+client và không tải URL tùy ý. Mỗi lần cấp link thành công ghi `VIEW_CONVERSATION`
+với note `Xem ảnh tin nhắn <id>`; lỗi quyền/path/Storage không ghi sự kiện thành
+công. Audit ghi việc cấp quyền xem, không khẳng định browser đã tải xong ảnh.
+
+Lỗi: `401` thiếu/token không hợp lệ; `403` không phải admin còn hoạt động hoặc
+không có report trực tiếp; `404` hội thoại/tin ảnh/object không còn tồn tại;
+`422` ID/path sai hoặc path cũ không thuộc contract riêng tư; `503` bucket thiếu
+hoặc đang public; `502` lỗi ký URL/Storage timeout/phản hồi không hợp lệ.
+Không mở ảnh từ URL ngoài, bucket public hoặc thư mục conversation/sender khác.
+
+Viewer chỉ yêu cầu link sau thao tác Xem ảnh, xóa query khỏi cache khi đóng,
+không lưu URL vào localStorage/sessionStorage, không gửi Referer khi tải ảnh.
+Sau 60 giây viewer ẩn ảnh và cho tải lại; mỗi lượt tải lại kiểm tra quyền/audit
+lại. Link đã cấp là quyền truy cập tạm thời; việc khóa tài khoản sau đó không
+thu hồi tức thì link đã phát hành. Ảnh đã tải có thể còn trong cache của client.
+Xem [Storage private downloads](https://supabase.com/docs/guides/storage/serving/downloads).
 
 #### `GET /admin/reports` và `GET /admin/reports/{id}`: dữ liệu trả về
 
@@ -587,7 +785,7 @@ Bảng `verification_questions` chỉ **chủ bài** đọc trực tiếp đư�
 ### 4.4 Những việc được ghi trực tiếp
 | Việc | Cách làm |
 |---|---|
-| Gửi tin nhắn | Chèn vào `messages`: `conversation_id`, `sender_id` = ID của bạn, `type` = `TEXT` hoặc `IMAGE`, `content` (1–2000 ký tự). Bị chặn nếu cuộc trò chuyện đã khóa |
+| Gửi tin nhắn | Chèn vào `messages`: `conversation_id`, `sender_id` = ID của bạn; `TEXT` dùng `content` 1–2000 ký tự. `IMAGE` dùng `image_path` theo contract bucket riêng tư bên dưới, `content` có thể null. Bị chặn nếu cuộc trò chuyện đã khóa |
 | Đánh dấu tin đã đọc | Cập nhật `messages.read_at` của tin do **người kia** gửi |
 | Đánh dấu thông báo đã đọc ("Đọc hết") | Cập nhật `notifications.read_at` |
 | Sửa hồ sơ | Cập nhật `profiles`: chỉ các cột `display_name`, `avatar_url`, `bio` (tối đa 160 ký tự) |
@@ -620,6 +818,29 @@ bị từ chối không tạo bài đăng dở dang. Không chạy seed/reset, k
 hoặc thay đổi dữ liệu cũ. Chưa kiểm tra Photo Picker/nén ảnh trên Android hoặc
 thao tác xóa Storage; không suy ra giới hạn MIME/dung lượng bucket từ các kiểm
 tra này (cấu hình bucket hiện không đặt hai giới hạn đó).
+
+#### Ảnh chat riêng tư (nhánh feature, chưa áp dụng live)
+
+Project hiện tại cần chạy `supabase/patches/20261111_private_chat_images.sql`
+bằng quyền owner trong một transaction; không chạy reset hoặc chạy lại toàn bộ
+schema trên database có dữ liệu. Project mới dùng `schema.sql` đã có cấu hình này.
+
+- Bucket `chat-images` **private**, tối đa 5 MiB/object, MIME JPEG/PNG/WebP.
+- Path: `<conversation_uuid>/<sender_uuid>/<filename>.<jpg|jpeg|png|webp>`.
+  Filename gồm 1–80 ký tự ASCII chữ/số/`_`/`-`, không có dấu chấm/traversal/URL.
+- Thành viên còn hoạt động chỉ upload trong thư mục của chính mình và hội
+  thoại chưa khóa; hai thành viên còn hoạt động đọc được ảnh kể cả sau khi khóa.
+  Admin không thuộc hội thoại không đọc trực tiếp qua RLS; dùng endpoint có audit.
+- Upload object trước rồi ghi `messages.image_path` bằng đúng path (không phải
+  URL); dùng `upsert:false`, nên đặt `cacheControl:'0'`. Không có policy UPDATE/
+  DELETE mới; việc gửi ảnh từ Android và cleanup upload là phạm vi riêng.
+- Patch không thay đổi `post-images` hoặc chuyển/xóa ảnh cũ. Nếu bucket cùng
+  tên đã tồn tại, cấu hình cũ được giữ; xác minh nó private trước khi dùng.
+  Path cũ/không hợp lệ trong `messages` được giữ nguyên, viewer từ chối mở.
+
+Schema/RLS/HTTP đã kiểm tra trên DB test cô lập; chưa kiểm chứng upload/ký URL
+bằng Storage thật cho bucket này và chưa áp dụng patch trên live. Không thể suy
+ra tính năng gửi ảnh Android đã hoàn tất từ viewer admin.
 
 ### 4.6 Realtime
 Đăng ký lắng nghe sự kiện thêm dòng (INSERT):

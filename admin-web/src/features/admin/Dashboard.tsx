@@ -164,7 +164,7 @@ export function Dashboard({
           </dl>
         </section>
       </div>
-      <section className="panel recent-panel">
+      <section className="panel recent-panel catalog-surface">
         <div className="section-heading">
           <h2>Báo cáo mới nhất</h2>
           <Button variant="ghost" onClick={() => openReports()}>
@@ -179,8 +179,10 @@ export function Dashboard({
           })}
           columns={[
             { key: "code", label: "Mã" },
-            { key: "target_type", label: "Đối tượng" },
+            { key: "target_type", label: "Loại" },
+            { key: "target_label", label: "Đối tượng" },
             { key: "reason", label: "Lý do" },
+            { key: "created_at", label: "Thời gian" },
             { key: "status", label: "Trạng thái" },
           ]}
         />

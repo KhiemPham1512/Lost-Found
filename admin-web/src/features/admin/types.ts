@@ -26,12 +26,44 @@ export type CatalogRow = {
   created_at?: string;
 };
 
+export type AdminPostDetail = CatalogRow & {
+  id: string;
+  title: string;
+  type: "LOST" | "FOUND";
+  status: string;
+  description: string | null;
+  location_text: string | null;
+  event_time: string | null;
+  created_at: string;
+  expires_at: string;
+  category_name: string;
+  author_id: string;
+  author_username: string;
+  report_count: number;
+  tags: string[];
+  image_paths: string[];
+};
+export type AdminUserDetail = CatalogRow & {
+  id: string;
+  username: string;
+  display_name: string | null;
+  role: "USER" | "ADMIN";
+  is_banned: boolean;
+  joined_month: string;
+  phone_masked: string | null;
+  post_count: number;
+  report_count: number;
+  avatar_url: string | null;
+  bio: string | null;
+};
+
 export type ReportUser = {
   id: string;
   username: string;
   is_banned: boolean;
   post_count: number;
   reported_before_count: number;
+  joined_at: string;
 };
 export type ReportDetailData = {
   id: string;
@@ -47,10 +79,15 @@ export type ReportDetailData = {
     type: "POST" | "USER" | "CONVERSATION";
     post: {
       id: string;
+      type: "LOST" | "FOUND";
       title: string;
       description: string;
       status: string;
       location_text: string;
+      category: { id: number; name: string };
+      tags: string[];
+      event_time: string | null;
+      created_at: string;
       image_paths: string[];
       author: ReportUser | null;
     } | null;

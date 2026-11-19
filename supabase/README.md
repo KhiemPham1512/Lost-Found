@@ -1,5 +1,20 @@
 # Database operations
 
+The reported-chat image feature adds a **private** chat-images bucket. For an
+existing project apply patches/20261111_private_chat_images.sql as owner inside
+a transaction before using the new admin image endpoint. It does not delete or
+move existing data or change post-images. Verify that the chat-images bucket
+has public=false, a 5 MiB limit and JPEG/PNG/WebP MIME
+types. The patch preserves configuration if the bucket name already exists.
+The API fails closed if that bucket is absent/public. This patch is not yet
+applied to the live project in the current feature branch.
+
+Authenticated active members may upload only into their own sender folder in
+an unlocked conversation, and read the conversation's history after locking.
+Nonmember admins obtain temporary image access only through audited FastAPI.
+No UPDATE/DELETE policy is added. Path and client integration contract are in
+docs/api.md; tests validate policies locally, not real Storage uploads yet.
+
 For a new project, run `schema.sql`. Existing projects run the two migrations in
 `migrations/` in timestamp order, then `install_cron.sql` as the database owner.
 The migration files supplement this repository's existing schema/patch workflow;

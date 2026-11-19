@@ -5,7 +5,75 @@ banned accounts, dashboard, filtered reports/posts/users and audit history.
 Report details support review and resolution, including post removal and account
 bans. Post and user lists support independent moderation with required reasons.
 Only directly reported conversations expose message inspection and locking;
-image messages are identified as images without displaying attachments.
+image attachment viewing is implemented on the current feature branch below.
+
+Current feature branch (not yet merged/deployed) adds explicit image viewing for
+directly reported conversations. The backend checks the stored message/path and
+issues a 60-second URL for the private chat-images bucket, logging each grant.
+The viewer supports loading/error/retry, expiry/reload, Escape/close and focus
+restoration; URLs are not persisted and query data is discarded on close. It
+never loads message-provided URLs directly. Requires the reviewed Storage SQL
+patch before use; that patch is not applied to live yet. Existing public post
+images are unaffected. Android sending-image integration remains separate.
+
+Local verification: 122 backend tests passed on isolated PostgreSQL; mypy
+checked 34 files; 43 browser tests passed with two pre-existing skips; the
+TypeScript/Vite build passed. Image tests cover guarded signing, Storage RLS,
+explicit opening, loading errors, retry, expiry, focus and four viewport sizes.
+Real Storage signing/upload and hosted image viewing remain unverified.
+
+PR #36 (merged and deployed) adds independent post/user
+details through admin-only GET `/admin/posts/{id}` and `/admin/users/{id}`.
+Lists retain their moderation buttons and add View, including inactive posts
+and admin profiles. Returning retains search/filter/page and restores focus;
+after a mutation removes the record from a filtered list, focus moves to its
+heading. Post details open the public author profile; reports also link to the
+user profile. The same remove/restore/ban/unban dialogs and restrictions apply.
+Phones remain masked; verification answers and private chats are not included.
+There is no migration or dependency change. Figma editing remains deferred.
+Local verification: 98 backend tests on isolated PostgreSQL and mypy across 34
+files; 41 browser tests passed with two pre-existing skips; TypeScript/Vite build
+passed. New detail/navigation/moderation/error/nullable-data flows and
+375/768/1024/1440px layouts were checked, including long text without horizontal
+overflow. Browser Auth/API responses are controlled; new endpoints are not yet
+verified in all variants live. Hosted QA Auth smoke passed post -> author ->
+post -> original query and logout, with both GETs returning 200, no raw phone/email or page
+errors, and 375/1440px fit. Render confirmed both services live on
+7a2aae4a5c50967b281adbb891040f135a792948. Tests, screenshots and helpers remain local.
+
+PR #35 (merged and deployed) completes existing admin data:
+audit history gains All/Post/User/Conversation filtering through the existing
+`target_type` parameter, combined with query/range and page reset. All omits the
+parameter; Reset clears all conditions. Dashboard recent reports show the target
+label and submission time, with the existing labeled record layout on smaller
+screens. Reported posts expose their existing type/category/tags/event time,
+posting date and the author's joining month. The stats response adds
+`recent_reports[].target_label` using public post titles/account handles or both
+conversation handles, matching report-list labels. No new endpoint, permission,
+database schema or dependency; dedicated post/user details and chat image viewing follow.
+Local verification on 2026-11-10: 35 browser tests passed, two pre-existing
+diagnostic/abandoned-experiment probes skipped; TypeScript/Vite build and diff
+check passed. The changed surfaces fit 375/768/1024/1440px without viewport or
+internal table overflow. External Auth/API are controlled in these tests; this
+UI changes from that PR have not had a separate hosted browser smoke yet.
+Render confirmed both services live on `4bc7a598bcc843f496a2c341f53e552b925bc343`;
+a real QA Auth stats read returned all five recent target labels on 2026-11-10.
+Figma editing is deferred at the user's request.
+Backend verification passed 87 tests on isolated PostgreSQL and mypy across 34
+source files. An HTTP test verifies stats target labels for all three report
+types; it initially failed because the field was missing from the real response.
+
+Reported conversations show public sender handles, with sender IDs as a fallback
+when a profile is unavailable. Messages run from oldest to newest across loaded
+pages; the reporter's messages appear on the right and system notices in the
+center. Public handles are read from `profiles` only after message inspection;
+private message reads still go through the audited admin API. This change is
+merged in PR #33 and verified on the hosted site with real QA Auth/API on
+2026-11-10: explicit inspection, all seven QA messages with matching handles
+and chronological content, and logout passed. All four viewport widths
+375/768/1024/1440px fit without page runtime errors. Profile failure/fallback
+and multiple message pages remain covered locally, not by this seven-message
+live fixture.
 
 The user now owns C's web scope; Android ownership is separate. Web design uses
 `ui-ux-pro-max` when available and follows the functions in the
@@ -21,7 +89,7 @@ On phones, table rows reflow into labeled records with visible action buttons;
 touch controls are at least 44px high. Keyboard users can skip navigation and
 focus moves to the destination heading. Canceling a moderation dialog restores
 focus to its trigger. These interface changes are verified on the live release,
-now at `a5fdb02` (2026-11-05, PR #26). The backend remains at `37a0405`;
+at `a5fdb02` during the 2026-11-05 check (PR #26). The backend then ran `37a0405`;
 backend application code and SQL scripts are unchanged between these commits.
 
 Additional Figma catalog fields are deployed and verified: report target type,
@@ -51,8 +119,9 @@ at commit `a5fdb02` before this check. The browser blocked all business mutation
 Type filters from Figma are implemented and verified locally: All/Lost/Found on
 posts and All/Post/User/Conversation on reports. They use the existing `type`
 parameter together with search/status; changing type resets pagination, All
-removes type and Reset clears the complete filter. Other catalogs omit this
-control. The shared shadcn ToggleGroup provides labeled keyboard controls with
+removes type and Reset clears the complete filter. Users omit this control;
+audit history uses its separate target-type filter described above.
+The shared shadcn ToggleGroup provides labeled keyboard controls with
 44px touch targets and the existing semantic colors. Loading is exposed through
 the catalog's busy state; error/retry and empty results retain the selected type.
 
@@ -60,8 +129,25 @@ Local verification on 2026-11-05 passed all 28 browser tests and TypeScript/Vite
 build (one archived diagnostic is skipped), including type/query/status requests,
 page reset, clearing, error recovery, keyboard/touch and 375/768/1024/1440px
 without overflow or console/page errors in the normal responsive flow. These
-tests control external Auth/API; type-filter additions are not yet verified live.
+tests control external Auth/API. A separate real Auth/API smoke on 2026-11-10
+verified each type, combined search/status, returned item types/statuses, and
+reset. With the user's authorized extra QA data, catalogs contain 27 posts and
+21 reports: page two returns seven posts and one report without IDs overlapping
+page one; changing type from page two sends offset zero. Both catalogs fit all
+four viewport widths without page runtime errors; logout passed. Live outage
+and retry behavior was not induced.
 No endpoint, permission, database or dependency-manifest change is required.
+
+Render confirmed admin merge SHA `45620acf63c5036d5667c4b2042f4ecb07773f1d`
+live on 2026-11-10 (deploy `dep-dbpgoqu7bikc73djaigg`). Earlier SHA references
+above describe the dated checks. The 11 new labeled QA posts/reports are retained
+for verification and affect dashboard counts: posts are ACTIVE, reports PENDING.
+Credentials, helper scripts, result manifests and screenshots remain local.
+
+These checks do not verify Android device integration or full Figma parity.
+Figma has admin post/user list frames and report details; dedicated admin
+post/user detail frames remain deferred. Their new API contract and local-only
+implementation status are documented in docs/api.md; chat image viewing follows.
 
 ```powershell
 cd admin-web

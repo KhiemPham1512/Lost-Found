@@ -85,6 +85,14 @@ class AdminPostsResponse(BaseModel):
     items: list[AdminPost]
 
 
+class AdminPostDetail(AdminPost):
+    description: str | None
+    location_text: str | None
+    event_time: datetime | None
+    tags: list[str]
+    image_paths: list[str]
+
+
 class AdminUser(BaseModel):
     id: UUID
     username: str
@@ -101,6 +109,11 @@ class AdminUser(BaseModel):
 class AdminUsersResponse(BaseModel):
     total: int
     items: list[AdminUser]
+
+
+class AdminUserDetail(AdminUser):
+    avatar_url: str | None
+    bio: str | None
 
 
 class AdminAction(BaseModel):
@@ -143,6 +156,7 @@ class RecentReport(BaseModel):
     status: ReportStatus
     created_at: datetime
     target_type: ReportTargetType
+    target_label: str
 
 
 class AdminStatsResponse(BaseModel):
@@ -185,3 +199,8 @@ class ModeratedUserResponse(BaseModel):
 class LockedConversationResponse(BaseModel):
     id: UUID
     is_locked: bool
+
+
+class AdminImageResponse(BaseModel):
+    url: str
+    expires_in: int

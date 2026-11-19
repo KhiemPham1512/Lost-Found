@@ -50,6 +50,7 @@ export const labels: Record<string, string> = {
   DISMISS: "Không vi phạm",
 };
 export type Column = { key: keyof CatalogRow; label: string };
+type TableAction = { label: string; run: () => void; id?: string };
 
 export function DataTable({
   rows,
@@ -58,7 +59,7 @@ export function DataTable({
 }: {
   rows: CatalogRow[];
   columns: Column[];
-  action?: (row: CatalogRow) => { label: string; run: () => void } | undefined;
+  action?: (row: CatalogRow) => TableAction | TableAction[] | undefined;
 }) {
   if (!rows.length)
     return (
@@ -118,17 +119,28 @@ export function DataTable({
             {action && (
               <TableCell data-label="Thao tác">
                 {(() => {
-                  const item = action(row);
-                  return item ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={item.run}
-                      aria-label={`${item.label} ${row.code ?? row.title ?? row.username ?? ""}`.trim()}
-                    >
-                      {item.label}
-                    </Button>
-                  ) : null;
+                  const result = action(row);
+                  const items = result
+                    ? Array.isArray(result)
+                      ? result
+                      : [result]
+                    : [];
+                  return (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {items.map((item) => (
+                        <Button
+                          key={item.label}
+                          id={item.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={item.run}
+                          aria-label={`${item.label} ${row.code ?? row.title ?? row.username ?? ""}`.trim()}
+                        >
+                          {item.label}
+                        </Button>
+                      ))}
+                    </div>
+                  );
                 })()}
               </TableCell>
             )}
