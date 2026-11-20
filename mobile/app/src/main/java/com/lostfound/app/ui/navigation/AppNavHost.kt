@@ -154,7 +154,7 @@ fun AppNavHost() {
                     onOpenPost = { navController.navigate(Routes.detail(it)) },
                     onOpenSearch = { navController.navigate(Routes.SEARCH) },
                     onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
-                    onOpenPendingVerifications = { navController.navigate(Routes.claimReview()) },
+                    onOpenPendingVerifications = { navController.openTab(Routes.MY_POSTS) },
                     onOpenUnreadMessages = { navController.openTab(Routes.MESSAGES) },
                     onOpenAwaitingHandover = { navController.navigate(Routes.HANDOVER) },
                     onCreatePost = { navController.navigate(Routes.CREATE_POST) },
@@ -261,14 +261,12 @@ fun AppNavHost() {
             composable(
                 Routes.CLAIM_REVIEW,
                 arguments = listOf(
-                    navArgument("postId") { type = NavType.StringType; nullable = true; defaultValue = null }
+                    navArgument("postId") { type = NavType.StringType }
                 )
-            ) {
-                // TODO(C): khi màn Duyệt dùng dữ liệu thật, nhận postId từ entry.arguments
+            ) { entry ->
                 ClaimReviewScreen(
-                    onDecision = { _, decision ->
-                        if (decision == "PASS") navController.navigate(Routes.CHAT)
-                    }
+                    postId = entry.arguments?.getString("postId").orEmpty(),
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Routes.CHAT) {

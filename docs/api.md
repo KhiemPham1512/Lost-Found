@@ -479,6 +479,14 @@ bị khóa vẫn dựa trên kiểm thử local. Lượt này chưa kiểm chứ
 live hoặc tích hợp Android/thiết bị. Không cần migration.
 
 #### `POST /claims/{claim_id}/decision` ✅
+
+**Android (nhánh `feat/a-android-claim-review`, chưa merge):** màn chủ bài đọc
+danh sách có phân trang ở endpoint trên, hiện hồ sơ công khai/câu trả lời/trạng thái
+thật, xác nhận và gửi `PASS`/`FAIL` bằng `claim_id`, rồi đọc lại danh sách. Không tự
+gửi lại decision khi lỗi hoặc mở chat mẫu sau `PASS`. Quyền/trạng thái do server
+kiểm tra; không đổi contract hay schema. Build/thiết bị và triển khai ghi riêng trong
+PR/handoff; việc API đã live không đồng nghĩa màn Android đã tích hợp đầy đủ.
+
 **Chỉ chủ bài** được gọi. Yêu cầu phải đang ở trạng thái `SUBMITTED`.
 ```json
 // Request

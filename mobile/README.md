@@ -84,8 +84,21 @@ hiện trạng thái trống. Ảnh thật có nút trước/sau và vuốt đ�
 Chủ bài thấy **Xem yêu cầu**, người khác đi vào luồng xác minh như trước. Bài Lost
 không có câu hỏi vẫn dùng **Gửi yêu cầu liên hệ**, không tự mở chat. Menu báo cáo
 giữ ID bài/người đăng thực tế. Phân quyền và trạng thái hợp lệ do server kiểm tra.
-Màn duyệt yêu cầu, hội thoại, trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật.
+Hội thoại, trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật.
 
-Bản sửa chi tiết/xác minh đang ở nhánh feature, chưa merge. Build/cài APK và kiểm
+Bản sửa chi tiết/xác minh đã merge qua PR #42 (`47d53f9`). Build/cài APK và kiểm
 chứng Android được ghi riêng với trạng thái triển khai API/web; không có SQL hay
 endpoint mới trong thay đổi này.
+
+## Duyệt yêu cầu (nhánh feature, chưa merge)
+
+Chủ bài mở yêu cầu từ bài cụ thể; lối tắt trang chủ dẫn tới bài của mình để chọn
+bài. Danh sách dùng `GET /posts/{post_id}/claims`, phân trang 20 mục với **Xem thêm**,
+hiện hồ sơ công khai, thời điểm, trạng thái và câu trả lời thật. Lost không có câu hỏi
+hiện yêu cầu liên hệ. Màn hình có tải lại, trạng thái rỗng và lỗi có thử lại.
+
+Chỉ yêu cầu `SUBMITTED` của bài `ACTIVE` có nút chấp nhận/từ chối; server vẫn quyết
+định quyền và trạng thái hợp lệ. Cả hai có xác nhận, chặn thao tác khi đang gửi và
+tải lại danh sách sau kết quả. Lỗi không tự gửi lại quyết định; cần kiểm tra trạng thái
+trước khi thử lại vì request có thể đã được lưu. Không mở hội thoại mẫu sau khi duyệt;
+giao diện chat thật là phần tiếp theo. Không thêm endpoint, SQL hay quyền mới.

@@ -32,7 +32,7 @@ object Routes {
     // Màn của C (B chỉ gắn vào điều hướng)
     const val DETAIL = "detail/{postId}"
     const val VERIFY = "verify/{postId}"
-    const val CLAIM_REVIEW = "claim_review?postId={postId}"
+    const val CLAIM_REVIEW = "claim_review/{postId}"
     const val CHAT = "chat"
     const val HANDOVER = "handover"
     const val NOTIFICATIONS = "notifications"
@@ -42,8 +42,7 @@ object Routes {
 
     fun detail(postId: String) = "detail/$postId"
     fun verify(postId: String) = "verify/$postId"
-    fun claimReview(postId: String? = null) =
-        if (postId == null) "claim_review" else "claim_review?postId=$postId"
+    fun claimReview(postId: String) = "claim_review/$postId"
 
     fun report(
         target: ReportTarget,

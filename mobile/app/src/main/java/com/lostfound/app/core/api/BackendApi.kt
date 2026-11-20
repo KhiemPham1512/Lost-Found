@@ -5,6 +5,8 @@ import com.lostfound.app.core.network.Http
 import com.lostfound.app.core.network.Http.orThrow
 import com.lostfound.app.core.session.SessionStore
 import okhttp3.Request
+import okhttp3.RequestBody
+import okio.BufferedSink
 import org.json.JSONObject
 
 /**
@@ -17,7 +19,8 @@ object BackendApi {
         method: String,
         path: String,
         body: JSONObject? = null,
-        authenticated: Boolean = true
+        authenticated: Boolean = true,
+        oneShot: Boolean = false
     ): JSONObject {
         require(path.startsWith("/")) { "API path không hợp lệ" }
         val builder = Request.Builder()
@@ -26,7 +29,16 @@ object BackendApi {
         if (authenticated) {
             builder.header("Authorization", "Bearer ${SessionStore.requireToken()}")
         }
-        val requestBody = body?.let { Http.jsonBody(it) }
+        val requestBody = body?.let { json ->
+            val content = Http.jsonBody(json)
+            if (!oneShot) content else object : RequestBody() {
+                // Không phát lại quyết định nếu kết nối lỗi sau khi server có thể đã lưu.
+                override fun isOneShot() = true
+                override fun contentType() = content.contentType()
+                override fun contentLength() = content.contentLength()
+                override fun writeTo(sink: BufferedSink) = content.writeTo(sink)
+            }
+        }
         builder.method(method, requestBody ?: if (method == "GET") null else Http.jsonBody(JSONObject()))
         val result = Http.execute(builder.build()).orThrow()
         return if (result.body.isBlank()) JSONObject() else JSONObject(result.body)
@@ -48,6 +60,13 @@ object BackendApi {
 
     /** POST /posts → {id, status, expires_at} */
     suspend fun createPost(body: JSONObject): JSONObject = send("POST", "/posts", body)
+
+    /** GET /posts/{id}/claims — danh sách dành riêng cho chủ bài. */
+    suspend fun readClaims(postId: String, limit: Int, offset: Int): JSONObject =
+        send("GET", "/posts/$postId/claims?limit=$limit&offset=$offset")
+
+    suspend fun decideClaim(claimId: String, decision: String): JSONObject =
+        send("POST", "/claims/$claimId/decision", JSONObject().put("decision", decision), oneShot = true)
 
     /** PATCH /posts/{id}/status với ARCHIVED, ACTIVE hoặc DELETED. */
     suspend fun changePostStatus(postId: String, status: String): JSONObject =
