@@ -30,6 +30,8 @@ object SessionStore {
     private const val PREFS = "lostfound_session"
     private lateinit var prefs: SharedPreferences
     private val refreshLock = Mutex()
+    // Đổi khi thay phiên đăng nhập, không đổi khi chỉ xoay token cùng phiên.
+    private var generation = 0L
 
     private val _session = MutableStateFlow<Session?>(null)
     val session: StateFlow<Session?> = _session.asStateFlow()
@@ -37,12 +39,20 @@ object SessionStore {
     val current: Session? get() = _session.value
     val userId: String? get() = _session.value?.userId
 
+    @Synchronized
     fun init(context: Context) {
+        generation++
         prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         _session.value = load()
     }
 
+    @Synchronized
     fun save(session: Session) {
+        generation++
+        writeSession(session)
+    }
+
+    private fun writeSession(session: Session) {
         prefs.edit()
             .putString("access_token", session.accessToken)
             .putString("refresh_token", session.refreshToken)
@@ -53,7 +63,9 @@ object SessionStore {
         _session.value = session
     }
 
+    @Synchronized
     fun clear() {
+        generation++
         prefs.edit().clear().apply()
         _session.value = null
     }
@@ -80,22 +92,35 @@ object SessionStore {
      * và app tự quay về màn Đăng nhập).
      */
     suspend fun validAccessToken(): String? {
-        val s = current ?: return null
+        val (s, version) = synchronized(this) {
+            val active = current ?: return null
+            active to generation
+        }
         if (isFresh(s)) return s.accessToken
         return refreshLock.withLock {
-            val again = current ?: return@withLock null
-            if (isFresh(again)) return@withLock again.accessToken
+            val again = synchronized(this) {
+                if (generation != version) return@withLock null
+                val latest = current ?: return@withLock null
+                if (isFresh(latest)) return@withLock latest.accessToken
+                latest
+            }
             try {
                 val renewed = SupabaseAuth.refresh(again.refreshToken)
-                save(renewed)
-                renewed.accessToken
+                synchronized(this) {
+                    if (generation != version) return@withLock null
+                    writeSession(renewed)
+                    renewed.accessToken
+                }
             } catch (e: ApiException) {
-                // 4xx: refresh token hết hạn / bị thu hồi / tài khoản bị khóa → đăng xuất
-                if (e.status in 400..499) {
-                    clear()
-                    null
-                } else {
-                    throw e
+                synchronized(this) {
+                    if (generation != version) return@withLock null
+                    // Chỉ xóa đúng phiên đã gửi refresh, không xóa phiên đăng nhập sau đó.
+                    if (e.status in 400..499) {
+                        clear()
+                        null
+                    } else {
+                        throw e
+                    }
                 }
             }
         }

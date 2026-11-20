@@ -67,4 +67,9 @@ Các màn của C (Chi tiết, Xác minh, Duyệt, Chat, Trao trả, Thông báo
 | Đăng ký, tạo bài, ẩn/hiện/xóa bài, số điện thoại, báo cáo | FastAPI qua `BackendApi` |
 | Đăng nhập, làm mới token, quên/đổi mật khẩu | Supabase Auth qua `SupabaseAuth` |
 
-Mọi lời gọi lấy token bằng `SessionStore.requireToken()`. Token sắp hết hạn sẽ được tự làm mới. Nếu không làm mới được, app tự quay về màn Đăng nhập.
+Mọi lời gọi lấy token bằng `SessionStore.requireToken()`. Token sắp hết hạn sẽ được
+tự làm mới; các request cùng phiên dùng chung một lần refresh. `4xx` của phiên
+hiện tại xóa phiên, còn lỗi mạng/`5xx` giữ phiên để thử lại. Refresh đang chạy hoặc
+request đang chờ không được dùng hay thay đổi phiên mới sau logout/đổi tài khoản.
+File chứa token được loại khỏi cloud backup và chuyển dữ liệu thiết bị; người dùng
+cần đăng nhập lại khi chuyển máy. Quy tắc không xóa các bản backup đã tồn tại.
