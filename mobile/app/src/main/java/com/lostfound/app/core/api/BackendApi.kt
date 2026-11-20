@@ -5,8 +5,6 @@ import com.lostfound.app.core.network.Http
 import com.lostfound.app.core.network.Http.orThrow
 import com.lostfound.app.core.session.SessionStore
 import okhttp3.Request
-import okhttp3.RequestBody
-import okio.BufferedSink
 import org.json.JSONObject
 
 /**
@@ -30,14 +28,7 @@ object BackendApi {
             builder.header("Authorization", "Bearer ${SessionStore.requireToken()}")
         }
         val requestBody = body?.let { json ->
-            val content = Http.jsonBody(json)
-            if (!oneShot) content else object : RequestBody() {
-                // Không phát lại quyết định nếu kết nối lỗi sau khi server có thể đã lưu.
-                override fun isOneShot() = true
-                override fun contentType() = content.contentType()
-                override fun contentLength() = content.contentLength()
-                override fun writeTo(sink: BufferedSink) = content.writeTo(sink)
-            }
+            if (oneShot) Http.oneShotJsonBody(json) else Http.jsonBody(json)
         }
         builder.method(method, requestBody ?: if (method == "GET") null else Http.jsonBody(JSONObject()))
         val result = Http.execute(builder.build()).orThrow()

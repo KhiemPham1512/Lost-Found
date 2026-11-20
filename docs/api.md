@@ -480,7 +480,7 @@ live hoặc tích hợp Android/thiết bị. Không cần migration.
 
 #### `POST /claims/{claim_id}/decision` ✅
 
-**Android (nhánh `feat/a-android-claim-review`, chưa merge):** màn chủ bài đọc
+**Android (đã merge PR #43, `ae6b8d7`):** màn chủ bài đọc
 danh sách có phân trang ở endpoint trên, hiện hồ sơ công khai/câu trả lời/trạng thái
 thật, xác nhận và gửi `PASS`/`FAIL` bằng `claim_id`, rồi đọc lại danh sách. Không tự
 gửi lại decision khi lỗi hoặc mở chat mẫu sau `PASS`. Quyền/trạng thái do server
@@ -812,6 +812,16 @@ Bảng `verification_questions` chỉ **chủ bài** đọc trực tiếp đư�
 | Đánh dấu tin đã đọc | Cập nhật `messages.read_at` của tin do **người kia** gửi |
 | Đánh dấu thông báo đã đọc ("Đọc hết") | Cập nhật `notifications.read_at` |
 | Sửa hồ sơ | Cập nhật `profiles`: chỉ các cột `display_name`, `avatar_url`, `bio` (tối đa 160 ký tự) |
+
+**Android chat chữ (nhánh `feat/a-android-text-chat`, chưa merge):** inbox và lịch
+sử đọc Supabase/RLS bằng ID thật; inbox 20 mục/trang, tin nhắn 50 mục với con trỏ
+`id` giảm dần. Chat polling 5 giây khi RESUMED, chưa dùng WebSocket Realtime.
+Chèn TEXT qua token người gửi, không phát lại body sau khi truyền; lỗi giữ bản nháp
+và cần kiểm tra lịch sử trước khi gửi lại (chưa có idempotency). Đánh dấu đã đọc
+chỉ các ID đã tải, chưa đọc và do người khác/hệ thống gửi. Khóa hội thoại vẫn cho
+đọc lịch sử, không cho gửi; phân quyền cuối cùng do RLS. Báo cáo giữ ID hội thoại.
+Không có SQL/endpoint mới, chưa nối ảnh riêng tư hoặc bàn giao; trạng thái build,
+thiết bị, merge và deploy được ghi riêng trong PR/handoff.
 
 ### 4.5 Upload ảnh
 Bucket `post-images`. Thư mục đầu **bắt buộc là ID của chính bạn**, nếu không bị

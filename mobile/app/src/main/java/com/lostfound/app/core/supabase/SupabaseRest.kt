@@ -16,7 +16,7 @@ import org.json.JSONObject
  * nên RLS trong database tự giới hạn những gì được thấy.
  *
  * Quy tắc của nhóm: ĐỌC đi thẳng Supabase, GHI nghiệp vụ đi qua FastAPI.
- * Ngoại lệ được phép ghi trực tiếp: sửa hồ sơ (display_name, bio, avatar_url) và upload ảnh.
+ * Ngoại lệ: hồ sơ được phép sửa, tin nhắn/đánh dấu đã đọc và upload ảnh.
  */
 object SupabaseRest {
 
@@ -40,6 +40,15 @@ object SupabaseRest {
     suspend fun select(table: String, params: List<Pair<String, String>>): JSONArray {
         val result = Http.execute(authed(restUrl(table, params)).get().build()).orThrow()
         return JSONArray(result.body.ifBlank { "[]" })
+    }
+
+    /** Chèn một hàng, không tự phát lại khi mất phản hồi; cần kiểm tra dữ liệu trước khi thử lại. */
+    suspend fun insert(table: String, values: JSONObject): JSONObject {
+        val result = Http.execute(
+            authed(restUrl(table, emptyList())).header("Prefer", "return=representation")
+                .post(Http.oneShotJsonBody(values)).build()
+        ).orThrow()
+        return JSONArray(result.body).getJSONObject(0)
     }
 
     /** Gọi hàm SQL (RPC). Trả về chuỗi JSON thô (mảng hoặc giá trị). */

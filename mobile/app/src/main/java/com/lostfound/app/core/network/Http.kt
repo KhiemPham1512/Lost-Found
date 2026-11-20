@@ -10,6 +10,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -35,6 +36,17 @@ object Http {
         .build()
 
     fun jsonBody(json: JSONObject): RequestBody = json.toString().toRequestBody(JSON)
+
+    /** Không phát lại nội dung sau khi server có thể đã lưu request. */
+    fun oneShotJsonBody(json: JSONObject): RequestBody {
+        val content = jsonBody(json)
+        return object : RequestBody() {
+            override fun isOneShot() = true
+            override fun contentType() = content.contentType()
+            override fun contentLength() = content.contentLength()
+            override fun writeTo(sink: BufferedSink) = content.writeTo(sink)
+        }
+    }
     fun jsonBody(json: JSONArray): RequestBody = json.toString().toRequestBody(JSON)
 
     /** Gửi request trên luồng IO. Lỗi mạng được đổi thành ApiException(0, ...). */
