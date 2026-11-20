@@ -4,18 +4,30 @@ package com.lostfound.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lostfound.app.data.model.Post
+import com.lostfound.app.core.AppConfig
+import com.lostfound.app.core.util.Formatters
+import com.lostfound.app.ui.components.Avatar
+import coil.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.launch
 
 private val PageBackground = Color(0xFFD7DBDE)
 private val PrimaryBlue = Color(0xFF28627A)
@@ -27,42 +39,27 @@ private val LostText = Color(0xFFB86B43)
 
 @Composable
 fun DetailScreen(
-    isFound: Boolean = true,
+    post: Post,
+    isMine: Boolean,
     onVerify: () -> Unit = {}
 ) {
-    val title = if (isFound) {
-        "Nhặt được điện thoại ốp xanh"
-    } else {
-        "Mất ví da màu nâu"
-    }
+    val isFound = post.isFound
+    val title = post.title
 
-    val category = if (isFound) "Điện thoại" else "Ví/Túi"
-    val location = if (isFound) {
-        "Bến xe Miền Đông, Bình Thạnh"
-    } else {
-        "Quận 1, TP.HCM"
-    }
-    val eventTime = if (isFound) {
-        "Nhặt lúc 09:30 hôm nay"
-    } else {
-        "Mất lúc 08:30 hôm nay"
-    }
-    val posterName = if (isFound) "Hoàng Nam" else "Thu Lan"
-    val posterHandle = if (isFound) "@hoang_nam" else "@thulan_k"
-    val avatar = if (isFound) "HN" else "TL"
-    val description = if (isFound) {
-        "Mình nhặt được điện thoại ở ghế chờ bến xe. Chủ máy vui lòng trả lời các câu hỏi xác minh để mình trả lại."
-    } else {
-        "Ví da màu nâu, bên trong có CCCD và vài tấm thẻ. Mất khoảng 8h30 gần công viên. Ai nhặt được xin liên hệ giúp mình."
-    }
-
-    var showOptions by remember { mutableStateOf(false) }
-    var selectedImage by remember { mutableIntStateOf(0) }
+    val category = post.categoryName ?: "Chưa rõ danh mục"
+    val location = post.locationText.ifBlank { "Chưa có địa điểm" }
+    val eventTime = Formatters.dateTime(post.eventTime).ifBlank { "Chưa có thời gian" }
+    val posterName = post.authorName?.takeIf { it.isNotBlank() }
+        ?: post.authorUsername ?: "Người đăng"
+    val posterHandle = post.authorUsername?.let { "@$it" }.orEmpty()
+    val description = post.description?.takeIf { it.isNotBlank() } ?: "Chưa có mô tả"
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
         containerColor = PageBackground,
         bottomBar = {
             Surface(
+                modifier = Modifier.navigationBarsPadding(),
                 color = CardWhite,
                 shadowElevation = 8.dp
             ) {
@@ -80,7 +77,8 @@ fun DetailScreen(
                     )
                 ) {
                     Text(
-                        text = if (isFound) "Đây là đồ của tôi"
+                        text = if (isMine) "Xem yêu cầu"
+                        else if (isFound) "Đây là đồ của tôi"
                         else "Tôi nhặt được món này",
                         fontWeight = FontWeight.Bold
                     )
@@ -97,103 +95,7 @@ fun DetailScreen(
                 .padding(horizontal = 16.dp)
         ) {
 
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = { },
-                    shape = RoundedCornerShape(10.dp),
-                    color = CardWhite
-                ) {
-                    Text(
-                        text = "‹",
-                        modifier = Modifier.padding(
-                            horizontal = 13.dp,
-                            vertical = 3.dp
-                        ),
-                        fontSize = 30.sp,
-                        color = PrimaryBlue
-                    )
-                }
-
-                Text(
-                    text = "Chi tiết bài đăng",
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp),
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF26343B)
-                )
-
-                Surface(
-                    onClick = { showOptions = true },
-                    shape = RoundedCornerShape(10.dp),
-                    color = CardWhite
-                ) {
-                    Text(
-                        text = "⋯",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 5.dp
-                        ),
-                        fontSize = 23.sp,
-                        color = Color.DarkGray
-                    )
-                }
-            }
-
-            // Image placeholder
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(205.dp)
-                    .background(
-                        color = if (isFound) FoundGreen else LostOrange,
-                        shape = RoundedCornerShape(14.dp)
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = if (isFound) "Điện thoại ốp xanh" else "Ví da màu nâu",
-                    color = if (isFound) FoundText else LostText,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(5.dp))
-                Text(
-                    text = "Ảnh ${selectedImage + 1} / 3 · vuốt để xem thêm",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-
-            // Image indicators
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(3) { index ->
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(if (selectedImage == index) 8.dp else 6.dp)
-                            .background(
-                                color = if (selectedImage == index)
-                                    PrimaryBlue else Color.LightGray,
-                                shape = CircleShape
-                            )
-                    )
-                }
-            }
+            PostImages(post)
 
             // Type and posting time
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -214,7 +116,7 @@ fun DetailScreen(
                 }
 
                 Text(
-                    text = if (isFound) "Đăng 3 giờ trước" else "Đăng 15 phút trước",
+                    text = Formatters.timeAgo(post.createdAt),
                     modifier = Modifier.padding(start = 10.dp),
                     color = Color.Gray,
                     fontSize = 12.sp
@@ -232,16 +134,15 @@ fun DetailScreen(
 
             // Information
             DetailInfoRow("📍", location)
-            DetailInfoRow("◷", eventTime)
+            DetailInfoRow("◷", "${if (isFound) "Nhặt lúc" else "Mất lúc"} $eventTime")
             DetailInfoRow("▣", category)
 
             // Tags
-            Row(
+            FlowRow(
                 modifier = Modifier.padding(top = 10.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DetailTag(if (isFound) "#iPhone" else "#ví da")
-                DetailTag(if (isFound) "#ốp xanh" else "#CCCD")
+                post.tags.forEach { DetailTag("#$it") }
             }
 
             // Description card
@@ -266,21 +167,7 @@ fun DetailScreen(
             // Poster information
             DetailCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .background(
-                                Color(0xFFDCE9ED),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = avatar,
-                            color = PrimaryBlue,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Avatar(post.authorAvatarUrl, posterName, size = 46.dp)
 
                     Column(
                         modifier = Modifier
@@ -294,7 +181,7 @@ fun DetailScreen(
                             color = Color(0xFF35434A)
                         )
                         Text(
-                            text = "$posterHandle · ${if (isFound) "12" else "4"} bài đăng",
+                            text = posterHandle,
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
@@ -310,7 +197,9 @@ fun DetailScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = if (isFound) {
+                    text = if (isMine) {
+                        "Bạn là chủ bài. Hãy xem và duyệt yêu cầu trước khi mở chat."
+                    } else if (isFound) {
                         "🔒 Bài này có câu hỏi xác minh (không công khai). Bạn cần trả lời trước khi nhắn tin cho người nhặt."
                     } else {
                         "Không chuyển tiền hay gửi số điện thoại. Hãy trao đổi trong chat của app."
@@ -326,28 +215,45 @@ fun DetailScreen(
         }
     }
 
-    // Options menu
-    if (showOptions) {
-        AlertDialog(
-            onDismissRequest = { showOptions = false },
-            title = {
-                Text("Tùy chọn bài đăng")
-            },
-            text = {
-                Text(
-                    "Báo cáo bài đăng\n" +
-                            "Spam, lừa đảo, thông tin sai, đòi tiền..."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showOptions = false }
-                ) {
-                    Text("Đóng")
-                }
-            }
-        )
+}
+
+@Composable
+private fun PostImages(post: Post) {
+    if (post.imagePaths.isEmpty()) {
+        Box(
+            Modifier.fillMaxWidth().height(205.dp)
+                .background(CardWhite, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) { Text("Chưa có ảnh", color = Color.Gray) }
+    } else key(post.id) {
+        val pager = rememberPagerState { post.imagePaths.size }
+        val scope = rememberCoroutineScope()
+        HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxWidth().height(205.dp).clip(RoundedCornerShape(14.dp))
+        ) { index ->
+            SubcomposeAsyncImage(
+                model = AppConfig.publicImageUrl(post.imagePaths[index]),
+                contentDescription = "Ảnh ${index + 1}/${post.imagePaths.size}: ${post.title}",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().background(CardWhite),
+                loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) } },
+                error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Không tải được ảnh", color = Color.Gray) } }
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            if (post.imagePaths.size > 1) IconButton(
+                enabled = pager.currentPage > 0,
+                onClick = { scope.launch { pager.scrollToPage(pager.currentPage - 1) } }
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Ảnh trước") }
+            Text("Ảnh ${pager.currentPage + 1} / ${post.imagePaths.size}", fontSize = 12.sp)
+            if (post.imagePaths.size > 1) IconButton(
+                enabled = pager.currentPage < post.imagePaths.lastIndex,
+                onClick = { scope.launch { pager.scrollToPage(pager.currentPage + 1) } }
+            ) { Icon(Icons.AutoMirrored.Filled.ArrowForward, "Ảnh sau") }
+        }
     }
+    Spacer(Modifier.height(12.dp))
 }
 
 @Composable

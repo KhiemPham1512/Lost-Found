@@ -234,8 +234,9 @@ request cũ nhận kết quả không còn phiên. Nhiều request cùng phiên 
 lần refresh; lỗi mạng/`5xx` giữ phiên, phản hồi `4xx` của phiên hiện tại xóa phiên.
 File `lostfound_session.xml` được loại khỏi backup Android cũ, cloud backup và
 chuyển dữ liệu sang thiết bị khác. Quy tắc không thu hồi token hoặc xóa bản backup
-đã tồn tại. Bản sửa phiên đang ở nhánh feature, chưa merge/deploy; kiểm chứng
-trên điện thoại dùng Auth HTTP giả lập, chưa thử backup/restore cloud thực tế.
+đã tồn tại. Bản sửa phiên đã merge vào `develop` qua PR #41; kiểm chứng trên điện
+thoại dùng Auth HTTP giả lập, chưa thử backup/restore cloud thực tế. Android cần
+APK được build lại; trạng thái Render không chứng minh APK đã được cập nhật.
 
 **Về tuổi thọ của token:** token sống **1 giờ**. Backend kiểm tra chữ ký và hạn của token chứ không hỏi lại Supabase mỗi lần, nên token đã cấp vẫn dùng được đến khi hết hạn dù người dùng đã bị xóa. Vì vậy, từ các endpoint cần quyền (từ `PUT /me/phone` trở đi), backend **tra thêm bảng `profiles`**: hồ sơ không tồn tại hoặc tài khoản bị khóa thì trả `403` ngay.
 
