@@ -227,7 +227,15 @@ không xác nhận Android hay độ khớp toàn bộ giao diện với Figma.
 ```
 Authorization: Bearer <access_token>
 ```
-`access_token` lấy được khi đăng nhập bằng Supabase Auth (thư viện `supabase-kt` tự giữ phiên và tự làm mới token).
+`access_token` lấy được khi đăng nhập bằng Supabase Auth. Android dùng
+`SessionStore` để giữ phiên và tự làm mới token qua REST. Phản hồi refresh của
+phiên cũ không được lưu, trả token hoặc xóa phiên sau khi logout/đổi tài khoản;
+request cũ nhận kết quả không còn phiên. Nhiều request cùng phiên dùng chung một
+lần refresh; lỗi mạng/`5xx` giữ phiên, phản hồi `4xx` của phiên hiện tại xóa phiên.
+File `lostfound_session.xml` được loại khỏi backup Android cũ, cloud backup và
+chuyển dữ liệu sang thiết bị khác. Quy tắc không thu hồi token hoặc xóa bản backup
+đã tồn tại. Bản sửa phiên đang ở nhánh feature, chưa merge/deploy; kiểm chứng
+trên điện thoại dùng Auth HTTP giả lập, chưa thử backup/restore cloud thực tế.
 
 **Về tuổi thọ của token:** token sống **1 giờ**. Backend kiểm tra chữ ký và hạn của token chứ không hỏi lại Supabase mỗi lần, nên token đã cấp vẫn dùng được đến khi hết hạn dù người dùng đã bị xóa. Vì vậy, từ các endpoint cần quyền (từ `PUT /me/phone` trở đi), backend **tra thêm bảng `profiles`**: hồ sơ không tồn tại hoặc tài khoản bị khóa thì trả `403` ngay.
 
@@ -351,8 +359,8 @@ Quy tắc thêm:
   từ chối bằng `4xx`. Với timeout, `5xx` hoặc phản hồi không đọc được, ảnh được giữ
   vì bài có thể đã được lưu. Chưa có đối soát tự động/idempotency: kiểm tra Bài của
   bạn trước khi gửi lại; có thể còn ảnh chưa gắn bài. Bản sửa client đã kiểm tra
-  trên điện thoại với HTTP/Storage giả lập; chưa merge vào `develop` hoặc xác minh
-  tình huống mất phản hồi trên dịch vụ thật. Không thay đổi endpoint hay SQL.
+  trên điện thoại với HTTP/Storage giả lập và đã merge vào `develop` qua PR #40;
+  chưa xác minh tình huống mất phản hồi trên dịch vụ thật. Không đổi endpoint/SQL.
 
 Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh chưa được tải lên · `422` sai luật ở bảng trên (kể cả bài `FOUND` không có câu hỏi), hoặc `category_id` không tồn tại · `429` đăng quá 10 bài trong 24 giờ · `403` tài khoản bị khóa hoặc chưa có hồ sơ.
 
