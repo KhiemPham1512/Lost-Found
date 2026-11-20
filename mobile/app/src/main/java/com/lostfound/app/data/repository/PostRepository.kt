@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.lostfound.app.core.api.BackendApi
 import com.lostfound.app.core.image.ImageCompressor
+import com.lostfound.app.core.network.ApiException
 import com.lostfound.app.core.network.dbl
 import com.lostfound.app.core.network.mapObjects
 import com.lostfound.app.core.network.str
@@ -223,7 +224,7 @@ object PostRepository {
 
     /**
      * Đăng bài: nén + upload từng ảnh vào <user_id>/<uuid>.jpg, rồi gọi POST /posts.
-     * Nếu POST /posts lỗi thì xóa các ảnh vừa upload để không để rác trong Storage.
+     * Chỉ dọn ảnh trước khi gửi bài hoặc khi server từ chối bằng 4xx.
      * [onProgress] nhận chuỗi mô tả bước đang làm để hiển thị.
      */
     suspend fun createPost(
@@ -233,6 +234,7 @@ object PostRepository {
     ): String {
         val uid = SessionStore.requireUserId()
         val uploaded = mutableListOf<String>()
+        var createRequested = false
         try {
             draft.images.forEachIndexed { index, uri ->
                 onProgress("Đang tải ảnh ${index + 1}/${draft.images.size}…")
@@ -257,10 +259,14 @@ object PostRepository {
                 body.put("latitude", Math.round(draft.latitude * 1_000_000) / 1_000_000.0)
                 body.put("longitude", Math.round(draft.longitude * 1_000_000) / 1_000_000.0)
             }
+            createRequested = true
             val created = BackendApi.createPost(body)
             return created.getString("id")
         } catch (e: Exception) {
-            SupabaseRest.removeImages(uploaded)
+            // shortcut: giữ ảnh khi kết quả chưa rõ; cần đối soát bài trước khi tự dọn.
+            if (!createRequested || (e is ApiException && e.status in 400..499)) {
+                SupabaseRest.removeImages(uploaded)
+            }
             throw e
         }
     }
