@@ -33,7 +33,7 @@ object Routes {
     const val DETAIL = "detail/{postId}"
     const val VERIFY = "verify/{postId}"
     const val CLAIM_REVIEW = "claim_review/{postId}"
-    const val CHAT = "chat"
+    const val CHAT = "chat/{conversationId}"
     const val HANDOVER = "handover"
     const val NOTIFICATIONS = "notifications"
 
@@ -43,6 +43,7 @@ object Routes {
     fun detail(postId: String) = "detail/$postId"
     fun verify(postId: String) = "verify/$postId"
     fun claimReview(postId: String) = "claim_review/$postId"
+    fun chat(conversationId: String) = "chat/$conversationId"
 
     fun report(
         target: ReportTarget,

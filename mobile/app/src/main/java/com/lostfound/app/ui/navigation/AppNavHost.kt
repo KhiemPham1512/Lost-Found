@@ -36,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.lostfound.app.ChatScreen
+import com.lostfound.app.ui.chat.MessagesScreen
 import com.lostfound.app.ClaimReviewScreen
 import com.lostfound.app.HandoverScreen
 import com.lostfound.app.NotificationsScreen
@@ -169,7 +170,7 @@ fun AppNavHost() {
                 )
             }
             composable(Routes.MESSAGES) {
-                MessagesTabScreen(onOpenChat = { navController.navigate(Routes.CHAT) })
+                MessagesScreen(onOpenChat = { navController.navigate(Routes.chat(it)) })
             }
             composable(Routes.PROFILE) {
                 ProfileScreen(
@@ -269,8 +270,12 @@ fun AppNavHost() {
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(Routes.CHAT) {
-                ChatScreen(onStartHandover = { navController.navigate(Routes.HANDOVER) })
+            composable(Routes.CHAT, arguments = listOf(navArgument("conversationId") { type = NavType.StringType })) { entry ->
+                ChatScreen(
+                    conversationId = entry.arguments?.getString("conversationId").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onReport = { id, title -> openReport(ReportTarget.CONVERSATION, id, title) }
+                )
             }
             composable(Routes.HANDOVER) {
                 HandoverScreen(

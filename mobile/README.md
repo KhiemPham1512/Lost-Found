@@ -84,13 +84,13 @@ hiện trạng thái trống. Ảnh thật có nút trước/sau và vuốt đ�
 Chủ bài thấy **Xem yêu cầu**, người khác đi vào luồng xác minh như trước. Bài Lost
 không có câu hỏi vẫn dùng **Gửi yêu cầu liên hệ**, không tự mở chat. Menu báo cáo
 giữ ID bài/người đăng thực tế. Phân quyền và trạng thái hợp lệ do server kiểm tra.
-Hội thoại, trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật.
+Trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật; phạm vi chat chữ ở dưới.
 
 Bản sửa chi tiết/xác minh đã merge qua PR #42 (`47d53f9`). Build/cài APK và kiểm
 chứng Android được ghi riêng với trạng thái triển khai API/web; không có SQL hay
 endpoint mới trong thay đổi này.
 
-## Duyệt yêu cầu (nhánh feature, chưa merge)
+## Duyệt yêu cầu (đã merge PR #43, `ae6b8d7`)
 
 Chủ bài mở yêu cầu từ bài cụ thể; lối tắt trang chủ dẫn tới bài của mình để chọn
 bài. Danh sách dùng `GET /posts/{post_id}/claims`, phân trang 20 mục với **Xem thêm**,
@@ -101,4 +101,23 @@ Chỉ yêu cầu `SUBMITTED` của bài `ACTIVE` có nút chấp nhận/từ ch�
 định quyền và trạng thái hợp lệ. Cả hai có xác nhận, chặn thao tác khi đang gửi và
 tải lại danh sách sau kết quả. Lỗi không tự gửi lại quyết định; cần kiểm tra trạng thái
 trước khi thử lại vì request có thể đã được lưu. Không mở hội thoại mẫu sau khi duyệt;
-giao diện chat thật là phần tiếp theo. Không thêm endpoint, SQL hay quyền mới.
+người dùng mở hội thoại từ tab Tin nhắn. Không thêm endpoint, SQL hay quyền mới.
+
+## Hội thoại và tin chữ (nhánh `feat/a-android-text-chat`, chưa merge)
+
+Tab Tin nhắn đọc hội thoại của người đang đăng nhập qua Supabase/RLS, hiện đúng
+người còn lại, bài đăng và trạng thái khóa; phân trang 20 mục và có **Tải lại**.
+Mở hội thoại bằng ID thật, đọc 50 tin mới nhất và tải tin cũ bằng con trỏ ID.
+Chỉ lấy hồ sơ công khai; bài không còn xem được có nhãn thay thế.
+
+Chat đọc lại mỗi 5 giây khi màn ở trạng thái RESUMED, dừng khi rời màn/nền;
+đây là polling, chưa đăng ký WebSocket Realtime. Chỉ đánh dấu đã đọc các tin
+nhận/hệ thống đã tải và chưa đọc, không cập nhật tin mình gửi hoặc toàn bộ lịch sử.
+Tin chữ 1–2000 ký tự được chèn với token/người gửi thật. Chỉ hiện thành công sau
+response đã lưu, chặn gửi lặp khi đang gửi. Request không phát lại nội dung sau
+khi truyền; lỗi giữ bản nháp và yêu cầu kiểm tra lịch sử trước khi gửi lại vì chưa có
+idempotency. Hội thoại đã khóa chỉ đọc; server vẫn chặn gửi nếu bị khóa giữa chừng.
+
+Báo cáo dùng đúng ID hội thoại. Đã bỏ đường sang trao trả mẫu từ chat; bàn giao thật
+là phạm vi tiếp theo. Tin IMAGE hiện nhãn ảnh, chưa gửi/mở ảnh riêng tư; rollout
+Storage chưa xác nhận. Không thêm SQL, endpoint, dependency hay quyền mới.

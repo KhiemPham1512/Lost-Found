@@ -1,391 +1,149 @@
-
 package com.lostfound.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private val ChatBackground = Color(0xFFD7DBDE)
-private val ChatBlue = Color(0xFF28627A)
-private val ChatWhite = Color(0xFFF5F7F8)
-private val ChatGreen = Color(0xFFD6E9DD)
-private val ChatGreenText = Color(0xFF39845D)
-private val ChatYellow = Color(0xFFF3E7B9)
-
-private data class ChatMessage(
-    val message: String,
-    val isMine: Boolean
-)
+import com.lostfound.app.core.session.SessionStore
+import com.lostfound.app.core.network.ApiException
+import com.lostfound.app.core.util.Formatters
+import com.lostfound.app.core.util.userMessage
+import com.lostfound.app.data.repository.ChatMessage
+import com.lostfound.app.data.repository.ChatRepository
+import com.lostfound.app.data.repository.Conversation
+import com.lostfound.app.data.repository.MessageHistory
+import com.lostfound.app.ui.components.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 
 @Composable
-fun ChatScreen(
-    onStartHandover: () -> Unit = {}
-) {
-    var messageInput by remember { mutableStateOf("") }
-
-    val messages = remember {
-        mutableStateListOf(
-            ChatMessage(
-                "Chào bạn, mình nhặt được điện thoại ở gần quán cà phê.",
-                false
-            ),
-            ChatMessage(
-                "Cảm ơn bạn, 5h chiều mình qua được không?",
-                true
-            ),
-            ChatMessage(
-                "Được, hẹn bạn ở cổng chính.",
-                false
-            )
-        )
+fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var chat by remember(conversationId) { mutableStateOf<Conversation?>(null) }
+    var messages by remember(conversationId) { mutableStateOf<List<ChatMessage>>(emptyList()) }
+    var busy by remember(conversationId) { mutableStateOf(false) }
+    var error by remember(conversationId) { mutableStateOf<String?>(null) }
+    var older by remember(conversationId) { mutableStateOf(false) }
+    var draft by rememberSaveable(conversationId) { mutableStateOf("") }
+    var sending by remember(conversationId) { mutableStateOf(false) }
+    var sendError by remember(conversationId) { mutableStateOf<String?>(null) }
+    var readError by remember(conversationId) { mutableStateOf<String?>(null) }
+    suspend fun load(before: Long? = null) {
+        if (busy) return
+        busy = true
+        error = null
+        try {
+            chat = ChatRepository.get(conversationId)
+            val history = ChatRepository.history(conversationId, MessageHistory(messages, older), before)
+            messages = history.items
+            older = history.hasOlder
+            try {
+                ChatRepository.markRead(conversationId, history.newlyLoaded)
+                readError = null
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) { readError = "Chưa đánh dấu đã đọc: ${e.userMessage()}" }
+        } catch (e: CancellationException) { throw e
+        } catch (e: Exception) { error = e.userMessage()
+        } finally { busy = false }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    // shortcut: đọc lại mỗi 5 giây khi mở chat; dùng Realtime khi cần giảm độ trễ hoặc số request.
+    LaunchedEffect(conversationId, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                load()
+                delay(5_000)
+            }
+        }
     }
 
-    Scaffold(
-        containerColor = ChatBackground
-    ) { innerPadding ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = { },
-                    color = ChatWhite,
-                    shape = RoundedCornerShape(9.dp)
-                ) {
-                    Text(
-                        text = "‹",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 3.dp
-                        ),
-                        fontSize = 28.sp,
-                        color = ChatBlue
-                    )
-                }
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 10.dp)
-                ) {
-                    Text(
-                        text = "Hoàng Nam",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF26343B)
-                    )
-                    Text(
-                        text = "Điện thoại ốp xanh · Đang trò chuyện",
-                        fontSize = 10.sp,
-                        color = Color.Gray
-                    )
-                }
-
-                Surface(
-                    color = ChatGreen,
-                    shape = CircleShape
-                ) {
-                    Text(
-                        text = "3",
-                        modifier = Modifier.padding(
-                            horizontal = 10.dp,
-                            vertical = 6.dp
-                        ),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ChatGreenText
-                    )
-                }
-            }
-
-            // Post information
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                color = ChatWhite,
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(
-                                ChatGreen,
-                                RoundedCornerShape(9.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "ĐT",
-                            color = ChatGreenText,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .padding(start = 9.dp)
-                            .weight(1f)
-                    ) {
-                        Text(
-                            text = "FOUND",
-                            color = ChatGreenText,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp
-                        )
-                        Text(
-                            text = "Điện thoại ốp xanh",
-                            color = Color(0xFF35434A),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Bến xe Miền Đông",
-                            color = Color.Gray,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-
-            // Progress
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 13.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ProgressStep("1", "Xác minh", true)
-                ProgressLine()
-                ProgressStep("2", "Chat", true)
-                ProgressLine()
-                ProgressStep("3", "Trao trả", false)
-                ProgressLine()
-                ProgressStep("4", "Hoàn tất", false)
-            }
-
-            // Chat messages
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(messages) { item ->
-                    ChatBubble(
-                        message = item.message,
-                        isMine = item.isMine
-                    )
-                }
-            }
-
-            // Handover reminder
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 5.dp),
-                color = ChatYellow,
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(
-                    text = "Chỉ xác nhận khi bạn đã nhận lại đúng món đồ. Khi cả hai xác nhận, bài đăng sẽ hoàn tất.",
-                    modifier = Modifier.padding(10.dp),
-                    fontSize = 10.sp,
-                    lineHeight = 14.sp,
-                    color = Color(0xFF796B32)
-                )
-            }
-
-            // Handover button
-            Button(
-                onClick = onStartHandover,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 5.dp)
-                    .height(42.dp),
-                shape = RoundedCornerShape(9.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ChatBlue
-                )
-            ) {
-                Text(
-                    text = "Tôi bước trao trả",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Message input
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = 12.dp,
-                        end = 12.dp,
-                        top = 5.dp,
-                        bottom = 10.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = messageInput,
-                    onValueChange = { messageInput = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = {
-                        Text(
-                            text = "Nhập tin nhắn...",
-                            fontSize = 12.sp
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = ChatWhite,
-                        unfocusedContainerColor = ChatWhite,
-                        focusedBorderColor = ChatBlue,
-                        unfocusedBorderColor = Color.Transparent
-                    )
-                )
-
-                Spacer(modifier = Modifier.width(7.dp))
-
-                Button(
-                    onClick = {
-                        val content = messageInput.trim()
-                        if (content.isNotEmpty()) {
-                            messages.add(
-                                ChatMessage(
-                                    message = content,
-                                    isMine = true
-                                )
-                            )
-                            messageInput = ""
+    Column(Modifier.fillMaxSize().imePadding()) {
+        TopBar(chat?.peerName ?: "Hội thoại", onBack) {
+            if (chat != null) TextButton(onClick = { onReport(conversationId, chat?.postTitle) }) { Text("Báo cáo") }
+        }
+        when {
+            error != null -> ErrorView(error!!, { scope.launch { load() } }, Modifier.weight(1f))
+            chat == null -> LoadingView(Modifier.weight(1f))
+            else -> {
+                Text(chat!!.postTitle ?: "Bài đăng không còn xem được", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium)
+                chat!!.peerUsername?.let { Text("@$it", Modifier.padding(horizontal = 16.dp)) }
+                if (chat!!.locked) Text("Hội thoại đã khóa · Chỉ đọc", Modifier.padding(16.dp))
+                TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text("Tải lại") }
+                readError?.let { Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error) }
+                LazyColumn(Modifier.weight(1f), reverseLayout = true, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (messages.isEmpty()) item { Text("Chưa có tin nhắn") }
+                    items(messages, key = { it.id }) { message ->
+                        val mine = message.senderId == SessionStore.userId
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
+                            Surface(
+                                modifier = Modifier.widthIn(max = 300.dp),
+                                shape = MaterialTheme.shapes.medium,
+                                color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(if (message.type == "SYSTEM") "Hệ thống" else if (mine) "Bạn" else chat!!.peerName, style = MaterialTheme.typography.labelSmall)
+                                    Text(if (message.type == "IMAGE") "Tin nhắn ảnh" else message.content.orEmpty())
+                                    Text(Formatters.dateTime(message.createdAt), style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
                         }
-                    },
-                    modifier = Modifier.height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ChatBlue
+                    }
+                    if (older) item {
+                        OutlinedButton(onClick = { scope.launch { load(messages.lastOrNull()?.id) } }, enabled = !busy) {
+                            Text("Tin nhắn cũ hơn")
+                        }
+                    }
+                }
+                sendError?.let { Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error) }
+                if (!chat!!.locked) {
+                    val content = draft.trim()
+                    val count = content.codePointCount(0, content.length)
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        label = { Text("Tin nhắn") },
+                        supportingText = { Text("$count / 2000") },
+                        isError = count > 2000,
+                        enabled = !sending,
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                     )
-                ) {
-                    Text(
-                        text = "Gửi",
-                        fontSize = 12.sp
-                    )
+                    Button(
+                        onClick = {
+                            if (!sending && count in 1..2000) {
+                                sending = true
+                                sendError = null
+                                scope.launch {
+                                    try {
+                                        val sent = ChatRepository.send(conversationId, content)
+                                        // Quay về cửa sổ mới nhất; tin gửi có thể cách lịch sử cũ hơn 50 mục.
+                                        messages = listOf(sent)
+                                        older = true
+                                        draft = ""
+                                        load()
+                                    } catch (e: CancellationException) { throw e
+                                    } catch (e: Exception) {
+                                        sendError = if (e is ApiException && e.status in 400..499)
+                                            "Không gửi được: ${e.userMessage()}"
+                                        else "Chưa xác nhận được tin đã gửi. Kiểm tra lịch sử trước khi gửi lại. ${e.userMessage()}"
+                                        load()
+                                    } finally { sending = false }
+                                }
+                            }
+                        },
+                        enabled = !sending && count in 1..2000,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) { Text(if (sending) "Đang gửi…" else "Gửi") }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ProgressStep(
-    number: String,
-    label: String,
-    completed: Boolean
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(24.dp)
-                .background(
-                    if (completed) ChatGreenText else Color(0xFFB9C1C5),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (completed) "✓" else number,
-                color = Color.White,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Text(
-            text = label,
-            modifier = Modifier.padding(top = 3.dp),
-            fontSize = 9.sp,
-            color = Color(0xFF46545B)
-        )
-    }
-}
-
-@Composable
-private fun ProgressLine() {
-    Box(
-        modifier = Modifier
-            .width(17.dp)
-            .height(2.dp)
-            .background(Color(0xFFB9C1C5))
-    )
-}
-
-@Composable
-private fun ChatBubble(
-    message: String,
-    isMine: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isMine) {
-            Arrangement.End
-        } else {
-            Arrangement.Start
-        }
-    ) {
-        Surface(
-            modifier = Modifier.widthIn(max = 270.dp),
-            color = if (isMine) ChatBlue else ChatWhite,
-            shape = RoundedCornerShape(
-                topStart = 12.dp,
-                topEnd = 12.dp,
-                bottomStart = if (isMine) 12.dp else 3.dp,
-                bottomEnd = if (isMine) 3.dp else 12.dp
-            )
-        ) {
-            Text(
-                text = message,
-                modifier = Modifier.padding(
-                    horizontal = 11.dp,
-                    vertical = 9.dp
-                ),
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                color = if (isMine) Color.White else Color(0xFF35434A)
-            )
         }
     }
 }
