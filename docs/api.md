@@ -347,6 +347,12 @@ Quy tắc thêm:
 - `event_time` phải có múi giờ và không ở tương lai (cho phép lệch 5 phút).
 - Mỗi người **tối đa 10 bài trong 24 giờ**.
 - Bài được tạo trong **một transaction**: có lỗi ở bất kỳ bước nào thì không có gì được lưu.
+- Android chỉ dọn ảnh vừa upload khi lỗi xảy ra trước lúc gọi tạo bài hoặc server
+  từ chối bằng `4xx`. Với timeout, `5xx` hoặc phản hồi không đọc được, ảnh được giữ
+  vì bài có thể đã được lưu. Chưa có đối soát tự động/idempotency: kiểm tra Bài của
+  bạn trước khi gửi lại; có thể còn ảnh chưa gắn bài. Bản sửa client đã kiểm tra
+  trên điện thoại với HTTP/Storage giả lập; chưa merge vào `develop` hoặc xác minh
+  tình huống mất phản hồi trên dịch vụ thật. Không thay đổi endpoint hay SQL.
 
 Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh chưa được tải lên · `422` sai luật ở bảng trên (kể cả bài `FOUND` không có câu hỏi), hoặc `category_id` không tồn tại · `429` đăng quá 10 bài trong 24 giờ · `403` tài khoản bị khóa hoặc chưa có hồ sơ.
 
