@@ -34,9 +34,8 @@ import com.lostfound.app.ui.components.LoadingView
 import com.lostfound.app.ui.components.TopBar
 
 /**
- * Bọc màn Chi tiết của C: B tải bài theo postId để biết loại bài, chủ bài,
- * rồi thêm thanh tiêu đề có nút quay lại và menu ba chấm (Báo cáo).
- * Khi C làm Chi tiết bằng dữ liệu thật, chỉ cần truyền postId vào DetailScreen.
+ * Tải dữ liệu chi tiết theo postId; chủ bài xem yêu cầu, người khác xác minh
+ * hoặc báo cáo bằng đúng ID của bài/người đăng.
  */
 @Composable
 fun PostDetailRoute(
@@ -94,7 +93,8 @@ fun PostDetailRoute(
                 )
                 // Màn của C: chủ bài bấm nút chính thì mở danh sách yêu cầu xác minh
                 else -> DetailScreen(
-                    isFound = post.isFound,
+                    post = post,
+                    isMine = isMine,
                     onVerify = if (isMine) onOpenClaims else onVerify
                 )
             }

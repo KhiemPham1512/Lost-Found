@@ -4,29 +4,35 @@ package com.lostfound.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.lostfound.app.data.remote.VerificationRepository
-import com.lostfound.app.data.remote.ClaimAnswer
+import com.lostfound.app.data.model.Post
+import com.lostfound.app.core.AppConfig
+import com.lostfound.app.core.util.Formatters
+import com.lostfound.app.ui.components.TopBar
+import com.lostfound.app.ui.components.TypeBadge
+import coil.compose.AsyncImage
 
 private val VerifyBackground = Color(0xFFD7DBDE)
 private val VerifyBlue = Color(0xFF28627A)
 private val VerifyWhite = Color(0xFFF5F7F8)
 private val VerifyGreen = Color(0xFFD6E9DD)
-private val VerifyGreenText = Color(0xFF39845D)
 private val VerifyYellow = Color(0xFFF3E7B9)
 
 @Composable
 fun VerifyScreen(
+    post: Post,
     questions: List<String> = emptyList(),
     attemptsLeft: Int = 2,
     onSubmit: (List<String>) -> Unit = {},
@@ -39,6 +45,8 @@ fun VerifyScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        topBar = { TopBar("Xác minh quyền sở hữu", onBack) },
         containerColor = VerifyBackground
     ) { innerPadding ->
 
@@ -46,41 +54,10 @@ fun VerifyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
-
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp, bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = onBack,
-                    color = VerifyWhite,
-                    shape = RoundedCornerShape(9.dp)
-                ) {
-                    Text(
-                        text = "‹",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 3.dp
-                        ),
-                        fontSize = 28.sp,
-                        color = VerifyBlue
-                    )
-                }
-
-                Text(
-                    text = "Xác minh quyền sở hữu",
-                    modifier = Modifier.padding(start = 12.dp),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF26343B)
-                )
-            }
 
             // Post information
             Surface(
@@ -98,12 +75,15 @@ fun VerifyScreen(
                             .background(VerifyGreen, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "ĐT",
-                            color = VerifyGreenText,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
+                        Icon(Icons.Filled.Search, contentDescription = null, tint = VerifyBlue)
+                        post.coverPath?.let {
+                            AsyncImage(
+                                model = AppConfig.publicImageUrl(it),
+                                contentDescription = "Ảnh bài đăng",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     Column(
@@ -111,24 +91,10 @@ fun VerifyScreen(
                             .padding(start = 12.dp)
                             .weight(1f)
                     ) {
-                        Surface(
-                            color = VerifyGreen,
-                            shape = RoundedCornerShape(20.dp)
-                        ) {
-                            Text(
-                                text = "FOUND",
-                                modifier = Modifier.padding(
-                                    horizontal = 9.dp,
-                                    vertical = 3.dp
-                                ),
-                                color = VerifyGreenText,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp
-                            )
-                        }
+                        TypeBadge(post.isFound)
 
                         Text(
-                            text = "Nhặt được điện thoại ốp xanh",
+                            text = post.title,
                             modifier = Modifier.padding(top = 4.dp),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
@@ -136,7 +102,8 @@ fun VerifyScreen(
                         )
 
                         Text(
-                            text = "Bến xe Miền Đông · 3 giờ trước",
+                            text = listOf(post.locationText, Formatters.timeAgo(post.createdAt))
+                                .filter { it.isNotBlank() }.joinToString(" · "),
                             fontSize = 11.sp,
                             color = Color.Gray
                         )
@@ -156,7 +123,7 @@ fun VerifyScreen(
                     text = if (questions.isEmpty()) {
                         "Bài đăng này không có câu hỏi xác minh. Bạn có thể gửi yêu cầu liên hệ đến chủ bài."
                     } else {
-                        "Trả lời chính xác các câu hỏi của người nhặt. Bạn chỉ nhắn tin được sau khi được duyệt. Còn $attemptsLeft lần thử."
+                        "Trả lời các câu hỏi của chủ bài. Bạn chỉ nhắn tin được sau khi được duyệt. Còn $attemptsLeft lần thử."
                     },
                     modifier = Modifier.padding(13.dp),
                     fontSize = 12.sp,

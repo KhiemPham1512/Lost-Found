@@ -10,6 +10,11 @@ import com.lostfound.app.data.remote.VerificationRepository
 import com.lostfound.app.data.remote.ClaimAnswer
 import com.lostfound.app.data.remote.QuestionsResponse
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import com.lostfound.app.data.model.Post
+import com.lostfound.app.data.repository.PostRepository
+import com.lostfound.app.ui.components.TopBar
+import com.lostfound.app.ui.components.LoadingView
 
 @Composable
 fun VerifyApiScreen(
@@ -19,6 +24,7 @@ fun VerifyApiScreen(
 ) {
     val repository = remember { VerificationRepository() }
     val scope = rememberCoroutineScope()
+    var post by remember(postId) { mutableStateOf<Post?>(null) }
 
     var response by remember(postId) {
         mutableStateOf<QuestionsResponse?>(null)
@@ -32,11 +38,11 @@ fun VerifyApiScreen(
         mutableStateOf<String?>(null)
     }
 
-    var submitError by remember {
+    var submitError by remember(postId) {
         mutableStateOf<String?>(null)
     }
 
-    var isSubmitting by remember {
+    var isSubmitting by remember(postId) {
         mutableStateOf(false)
     }
 
@@ -47,26 +53,33 @@ fun VerifyApiScreen(
     LaunchedEffect(postId, retryKey) {
         isLoading = true
         loadError = null
-
-        repository.getQuestions(postId).fold(
-            onSuccess = {
-                response = it
-            },
-            onFailure = {
-                loadError = it.message ?: "Không tải được câu hỏi"
-            }
-        )
+        post = null
+        response = null
+        try {
+            post = PostRepository.getPost(postId)
+                ?: throw IllegalStateException("Không xem được bài đăng này")
+            repository.getQuestions(postId).fold(
+                onSuccess = {
+                    response = it
+                },
+                onFailure = {
+                    loadError = it.message ?: "Không tải được câu hỏi"
+                }
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            loadError = e.message ?: "Không tải được bài đăng"
+        }
 
         isLoading = false
     }
 
     when {
         isLoading -> {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            Column(Modifier.fillMaxSize()) {
+                TopBar("Xác minh quyền sở hữu", onBack)
+                LoadingView(message = "Đang tải bài đăng và câu hỏi")
             }
         }
 
@@ -92,12 +105,13 @@ fun VerifyApiScreen(
             }
         }
 
-        response != null -> {
+        response != null && post != null -> {
             val currentResponse = response!!
             val orderedQuestions =
                 currentResponse.questions.sortedBy { it.position }
 
             VerifyScreen(
+                post = post!!,
                 questions = orderedQuestions.map { it.questionText },
                 attemptsLeft = currentResponse.attemptsLeft,
                 onBack = onBack,

@@ -73,3 +73,19 @@ hiện tại xóa phiên, còn lỗi mạng/`5xx` giữ phiên để thử lại
 request đang chờ không được dùng hay thay đổi phiên mới sau logout/đổi tài khoản.
 File chứa token được loại khỏi cloud backup và chuyển dữ liệu thiết bị; người dùng
 cần đăng nhập lại khi chuyển máy. Quy tắc không xóa các bản backup đã tồn tại.
+
+## Chi tiết bài và xác minh
+
+Chi tiết đọc bài, ảnh, tag, danh mục và hồ sơ công khai qua Supabase/RLS. Màn xác
+minh tải lại đúng bài theo `postId` cùng câu hỏi từ `GET /posts/{post_id}/questions`;
+không dùng tiêu đề, ảnh, tác giả hay số bài đăng mẫu. Khi không có ảnh/mô tả, app
+hiện trạng thái trống. Ảnh thật có nút trước/sau và vuốt để xem; lỗi tải ảnh có thông báo.
+
+Chủ bài thấy **Xem yêu cầu**, người khác đi vào luồng xác minh như trước. Bài Lost
+không có câu hỏi vẫn dùng **Gửi yêu cầu liên hệ**, không tự mở chat. Menu báo cáo
+giữ ID bài/người đăng thực tế. Phân quyền và trạng thái hợp lệ do server kiểm tra.
+Màn duyệt yêu cầu, hội thoại, trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật.
+
+Bản sửa chi tiết/xác minh đang ở nhánh feature, chưa merge. Build/cài APK và kiểm
+chứng Android được ghi riêng với trạng thái triển khai API/web; không có SQL hay
+endpoint mới trong thay đổi này.
