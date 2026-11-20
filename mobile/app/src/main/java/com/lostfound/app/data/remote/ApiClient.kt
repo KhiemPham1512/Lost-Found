@@ -1,6 +1,7 @@
 package com.lostfound.app.data.remote
 
-import com.lostfound.app.data.auth.SessionManager
+import com.lostfound.app.core.AppConfig
+import com.lostfound.app.core.session.SessionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -17,8 +18,8 @@ data class ApiResponse(
 class ApiClient {
 
     companion object {
-        private const val BASE_URL =
-            "https://lost-found-api-ph8v.onrender.com"
+        // Đọc từ local.properties (API_BASE_URL), mặc định là bản trên Render
+        private val BASE_URL = AppConfig.apiBaseUrl
     }
 
     suspend fun get(path: String): Result<ApiResponse> {
@@ -48,7 +49,8 @@ class ApiClient {
         var connection: HttpURLConnection? = null
 
         try {
-            val token = SessionManager.getAccessToken()
+            // Tự làm mới token nếu sắp hết hạn
+            val token = SessionStore.validAccessToken()
                 ?: throw Exception("Bạn chưa đăng nhập")
 
             require(path.startsWith("/") && !path.startsWith("//")) {
