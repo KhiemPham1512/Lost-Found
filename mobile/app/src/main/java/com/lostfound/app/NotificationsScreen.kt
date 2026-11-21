@@ -1,265 +1,107 @@
-
 package com.lostfound.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private data class NotificationItem(
-    val initials: String,
-    val title: String,
-    val description: String,
-    val time: String,
-    val isUnread: Boolean
-)
+import com.lostfound.app.core.util.Formatters
+import com.lostfound.app.core.util.userMessage
+import com.lostfound.app.data.repository.AppNotification
+import com.lostfound.app.data.repository.NotificationCursor
+import com.lostfound.app.data.repository.NotificationRepository
+import com.lostfound.app.data.repository.NotificationDestination
+import com.lostfound.app.ui.components.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @Composable
-fun NotificationsScreen() {
-    val newNotifications = remember {
-        mutableStateListOf(
-            NotificationItem(
-                "NA", "Nguyễn An gửi yêu cầu xác minh",
-                "Người này muốn nhận lại món đồ bạn đăng.", "5 phút trước", true
-            ),
-            NotificationItem(
-                "TH", "Trần Huy gửi yêu cầu xác minh",
-                "Có một yêu cầu mới cho bài đăng của bạn.", "30 phút trước", true
-            ),
-            NotificationItem(
-                "MK", "Yêu cầu xác minh được chấp nhận",
-                "Bạn có thể bắt đầu trò chuyện với chủ bài đăng.", "2 giờ trước", true
-            ),
-            NotificationItem(
-                "LH", "Chủ bài xác nhận đã trao trả",
-                "Vui lòng xác nhận bạn đã nhận được đồ.", "4 giờ trước", true
-            )
-        )
+fun NotificationsScreen(onBack: () -> Unit, onOpen: (NotificationDestination) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var rows by remember { mutableStateOf<List<AppNotification>>(emptyList()) }
+    var cursor by remember { mutableStateOf<NotificationCursor?>(null) }
+    var more by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var writing by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    suspend fun load(before: NotificationCursor? = null) {
+        busy = true
+        error = null
+        try {
+            val page = NotificationRepository.list(before)
+            rows = if (before == null) page else (rows + page).distinctBy { it.id }
+            cursor = page.lastOrNull()?.cursor
+            more = page.size == NotificationRepository.PAGE_SIZE
+        } catch (e: CancellationException) { throw e
+        } catch (e: Exception) { error = e.userMessage()
+        } finally { busy = false }
     }
-
-    val oldNotifications = listOf(
-        NotificationItem(
-            "!", "Báo cáo của bạn đã được xử lý",
-            "Cảm ơn bạn đã góp phần xây dựng cộng đồng.", "Hôm qua", false
-        ),
-        NotificationItem(
-            "LF", "Bài đăng đã hoàn tất",
-            "Bài đăng của bạn đã được đánh dấu DONE.", "2 ngày trước", false
-        )
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF7F7F7))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "Thông báo",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF202020)
-            )
-
-            TextButton(
-                onClick = {
-                    for (i in newNotifications.indices) {
-                        newNotifications[i] =
-                            newNotifications[i].copy(isUnread = false)
+    // shortcut: tải khi mở màn hoặc bấm tải lại; dùng Realtime khi cần cập nhật tức thì.
+    LaunchedEffect(Unit) { load() }
+    fun open(notification: AppNotification) {
+        if (busy || writing) return
+        writing = true
+        scope.launch {
+            try {
+                val destination = NotificationRepository.destination(notification)
+                if (notification.readAt == null) NotificationRepository.markRead(notification.id)
+                load()
+                if (destination != null) onOpen(destination) else notice = "Đã đọc thông báo."
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                notice = "Không mở được thông báo: ${e.userMessage()}"
+                load()
+            } finally { writing = false }
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Thông báo", onBack) {
+            TextButton(onClick = {
+                val through = rows.firstOrNull()?.cursor
+                if (!busy && !writing && through != null) {
+                    writing = true
+                    scope.launch {
+                        try {
+                            NotificationRepository.markAll(through)
+                            notice = "Đã cập nhật trạng thái đã đọc."
+                        } catch (e: CancellationException) { throw e
+                        } catch (e: Exception) { notice = "Chưa lưu được trạng thái đã đọc: ${e.userMessage()}"
+                        } finally { writing = false }
+                        load()
                     }
                 }
-            ) {
-                Text(
-                    "Đọc hết",
-                    color = Color(0xFF2878D0),
-                    fontSize = 14.sp
-                )
+            }, enabled = !busy && !writing && rows.isNotEmpty()) { Text("Đọc hết") }
+        }
+        TextButton(onClick = { scope.launch { load() } }, enabled = !busy && !writing) { Text("Tải lại") }
+        notice?.let { Text(it, Modifier.padding(horizontal = 16.dp)) }
+        if (writing) LinearProgressIndicator(Modifier.fillMaxWidth())
+        when {
+            busy && rows.isEmpty() -> LoadingView()
+            error != null && rows.isEmpty() -> ErrorView(error!!, { scope.launch { load() } })
+            else -> LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (rows.isEmpty()) item { Text("Chưa có thông báo") }
+                for (unread in listOf(true, false)) {
+                    val group = rows.filter { (it.readAt == null) == unread }
+                    if (group.isNotEmpty()) item { Text(if (unread) "Mới" else "Trước đó", style = MaterialTheme.typography.titleMedium) }
+                    items(group, key = { it.id }) { notification ->
+                        Card(onClick = { open(notification) }, enabled = !busy && !writing, modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(notification.title, style = MaterialTheme.typography.titleMedium)
+                                notification.body?.let { Text(it) }
+                                Text(Formatters.dateTime(notification.createdAt), style = MaterialTheme.typography.bodySmall)
+                                Text(if (unread) "Chưa đọc" else "Đã đọc", color = if (unread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+                error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
+                if (more) item {
+                    OutlinedButton(onClick = { scope.launch { load(cursor) } }, enabled = !busy && !writing) { Text("Xem thêm") }
+                }
             }
         }
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                bottom = 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            item {
-                Text(
-                    "Mới",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
-
-            items(newNotifications) { notification ->
-                NotificationCard(notification)
-            }
-
-            item {
-                Text(
-                    "Trước đó",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(
-                        top = 16.dp,
-                        bottom = 8.dp
-                    )
-                )
-            }
-
-            items(oldNotifications) { notification ->
-                NotificationCard(notification)
-            }
-        }
-
-        BottomNavigationBar()
-    }
-}
-
-@Composable
-private fun NotificationCard(notification: NotificationItem) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(
-                        Color(0xFFE8F1FC),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    notification.initials,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2878D0),
-                    fontSize = 13.sp
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp, end = 8.dp)
-            ) {
-                Text(
-                    notification.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF222222)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    notification.description,
-                    fontSize = 12.sp,
-                    color = Color(0xFF777777),
-                    lineHeight = 17.sp
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    notification.time,
-                    fontSize = 11.sp,
-                    color = Color(0xFF999999)
-                )
-            }
-
-            if (notification.isUnread) {
-                Box(
-                    modifier = Modifier
-                        .size(9.dp)
-                        .background(
-                            Color(0xFFE64B4B),
-                            CircleShape
-                        )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BottomNavigationBar() {
-    Surface(
-        color = Color.White,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavItem("⌂", "Home")
-            BottomNavItem("▤", "Bài của tôi")
-
-            Text(
-                "+",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Light,
-                color = Color(0xFF2878D0)
-            )
-
-            BottomNavItem("▢", "Tin nhắn")
-            BottomNavItem("○", "Cá nhân")
-        }
-    }
-}
-
-@Composable
-private fun BottomNavItem(
-    symbol: String,
-    label: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            symbol,
-            fontSize = 20.sp,
-            color = Color(0xFF777777)
-        )
-        Text(
-            label,
-            fontSize = 10.sp,
-            color = Color(0xFF777777)
-        )
     }
 }

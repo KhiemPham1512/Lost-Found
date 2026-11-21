@@ -84,7 +84,7 @@ hiện trạng thái trống. Ảnh thật có nút trước/sau và vuốt đ�
 Chủ bài thấy **Xem yêu cầu**, người khác đi vào luồng xác minh như trước. Bài Lost
 không có câu hỏi vẫn dùng **Gửi yêu cầu liên hệ**, không tự mở chat. Menu báo cáo
 giữ ID bài/người đăng thực tế. Phân quyền và trạng thái hợp lệ do server kiểm tra.
-Thông báo và ảnh chat riêng tư vẫn chưa nối đủ dữ liệu thật; chat chữ/trao trả ở dưới.
+Ảnh chat riêng tư chưa nối đủ dữ liệu thật; phạm vi chat chữ/trao trả/thông báo ở dưới.
 
 Bản sửa chi tiết/xác minh đã merge qua PR #42 (`47d53f9`). Build/cài APK và kiểm
 chứng Android được ghi riêng với trạng thái triển khai API/web; không có SQL hay
@@ -122,7 +122,7 @@ Báo cáo dùng đúng ID hội thoại. Chat mở trao trả theo hội thoại
 Tin IMAGE hiện nhãn ảnh, chưa gửi/mở ảnh riêng tư; rollout
 Storage chưa xác nhận. Không thêm SQL, endpoint, dependency hay quyền mới.
 
-## Trao trả (nhánh `feat/a-android-handover`, chưa merge)
+## Trao trả (đã merge PR #45, `c404dfe`)
 
 Từ chat mở đúng hội thoại/yêu cầu; lối tắt **Chờ xác nhận trao trả** ở Home dẫn
 tới danh sách hội thoại để chọn giao dịch. Màn trao trả đọc trạng thái và thời điểm
@@ -139,4 +139,24 @@ Trạng thái tự đọc lại mỗi 5 giây khi RESUMED; có tải lại, lỗ
 cáo đúng hội thoại (lý do Khác được chọn sẵn). Không chuyển tới thông báo mẫu khi
 hoàn tất. Bài đã giải quyết có thể bị RLS ẩn với người gửi yêu cầu; khi đó dùng nhãn
 bài không còn xem được, vẫn đọc lịch sử hội thoại theo quyền hiện hành.
-Không thêm SQL, endpoint, trạng thái hay dependency; thông báo thật là phần tiếp theo.
+Không thêm SQL, endpoint, trạng thái hay dependency; thông báo thật được mô tả dưới.
+
+## Thông báo (nhánh `feat/a-android-notifications`, chưa merge)
+
+Màn chuông đọc thông báo của tài khoản hiện tại qua Supabase/RLS, không dùng người
+hay nội dung mẫu. Mới/Trước đó theo `read_at`; 20 mục mỗi trang, con trỏ `created_at`
+và `id` để giữ thứ tự khi thời điểm trùng nhau. Tải lại khi mở màn/nhấn **Tải lại**,
+chưa dùng WebSocket/FCM/push hay thêm chỉ số đếm mới trên Home.
+
+**Đọc hết** cập nhật các mục chưa đọc của chính mình tới khóa sắp xếp mới nhất đã
+tải, gồm cả các trang cũ; không áp dụng cho khóa mới hơn mốc đó. Mở một mục chỉ
+đánh dấu chính mục đó nếu còn chưa đọc. Chỉ gửi `read_at`; có chặn thao tác lặp,
+lỗi/thử lại và đọc lại server sau khi ghi, không tự đổi dữ liệu thành công trước phản hồi.
+
+Yêu cầu mới mở danh sách chủ bài; được duyệt mở đúng hội thoại; chờ trao trả/hoàn tất
+mở đúng màn trao trả. Mã hội thoại được tra bằng `claim_id` dưới RLS, không đoán từ
+nội dung. Từ chối/gỡ/hết hạn mở bài có ID thật; kết quả báo cáo mở Báo cáo đã gửi.
+Thông tin không có đích chỉ đánh dấu đã đọc; hội thoại không còn truy cập được báo
+lỗi trước khi đánh dấu, không mở giao dịch khác. Có thể dùng Đọc hết để đọc mục đó.
+Loại tương lai vẫn hiện nội dung, không suy diễn điều hướng.
+Không đổi SQL, endpoint, quyền hay dependency; ảnh chat riêng tư/push còn là phạm vi sau.
