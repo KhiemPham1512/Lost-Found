@@ -44,6 +44,7 @@ import com.lostfound.app.VerifyApiScreen
 import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.data.model.ReportReason
 import com.lostfound.app.data.model.ReportTarget
+import com.lostfound.app.data.repository.NotificationDestination
 import com.lostfound.app.ui.auth.ChangePasswordScreen
 import com.lostfound.app.ui.auth.ForgotPasswordScreen
 import com.lostfound.app.ui.auth.LoginScreen
@@ -286,7 +287,18 @@ fun AppNavHost() {
                 )
             }
             composable(Routes.NOTIFICATIONS) {
-                NotificationsScreen()
+                NotificationsScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpen = { target ->
+                        navController.navigate(when (target) {
+                            is NotificationDestination.Post -> Routes.detail(target.id)
+                            is NotificationDestination.Claims -> Routes.claimReview(target.postId)
+                            is NotificationDestination.Chat -> Routes.chat(target.id)
+                            is NotificationDestination.Handover -> Routes.handover(target.id)
+                            NotificationDestination.Reports -> Routes.SENT_REPORTS
+                        })
+                    }
+                )
             }
         }
     }
