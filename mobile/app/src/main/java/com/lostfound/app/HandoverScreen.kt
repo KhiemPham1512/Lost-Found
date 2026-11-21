@@ -1,422 +1,115 @@
-
 package com.lostfound.app
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
-private val HandoverBackground = Color(0xFFD7DBDE)
-private val HandoverBlue = Color(0xFF28627A)
-private val HandoverWhite = Color(0xFFF5F7F8)
-private val HandoverGreen = Color(0xFFD6E9DD)
-private val HandoverGreenText = Color(0xFF39845D)
-private val HandoverYellow = Color(0xFFF3E7B9)
-private val HandoverRed = Color(0xFFC65B52)
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import com.lostfound.app.core.util.Formatters
+import com.lostfound.app.core.network.ApiException
+import com.lostfound.app.core.util.userMessage
+import com.lostfound.app.data.repository.HandoverRepository
+import com.lostfound.app.data.repository.HandoverState
+import com.lostfound.app.ui.components.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
-fun HandoverScreen(
-    onConfirmReceived: () -> Unit = {},
-    onReportProblem: () -> Unit = {}
-) {
-    var showConfirmDialog by remember { mutableStateOf(false) }
-    var showProblemDialog by remember { mutableStateOf(false) }
-
-    Scaffold(
-        containerColor = HandoverBackground
-    ) { innerPadding ->
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp)
-        ) {
-
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 18.dp, bottom = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = { },
-                    color = HandoverWhite,
-                    shape = RoundedCornerShape(9.dp)
-                ) {
-                    Text(
-                        text = "‹",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 3.dp
-                        ),
-                        fontSize = 28.sp,
-                        color = HandoverBlue
-                    )
-                }
-
-                Text(
-                    text = "Xác nhận trao trả",
-                    modifier = Modifier.padding(start = 12.dp),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF26343B)
-                )
-            }
-
-            // Post information
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = HandoverWhite,
-                shape = RoundedCornerShape(13.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(
-                                HandoverGreen,
-                                RoundedCornerShape(10.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "ĐT",
-                            color = HandoverGreenText,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Column(
-                        modifier = Modifier
-                            .padding(start = 10.dp)
-                            .weight(1f)
-                    ) {
-                        Text(
-                            text = "FOUND",
-                            color = HandoverGreenText,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            text = "Điện thoại ốp xanh",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF35434A)
-                        )
-
-                        Text(
-                            text = "Bến xe Miền Đông",
-                            fontSize = 10.sp,
-                            color = Color.Gray
-                        )
+fun HandoverScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit) {
+    val scope = rememberCoroutineScope()
+    var state by remember(conversationId) { mutableStateOf<HandoverState?>(null) }
+    var busy by remember(conversationId) { mutableStateOf(false) }
+    var error by remember(conversationId) { mutableStateOf<String?>(null) }
+    var submitting by remember(conversationId) { mutableStateOf(false) }
+    var showConfirm by remember(conversationId) { mutableStateOf(false) }
+    var notice by remember(conversationId) { mutableStateOf<String?>(null) }
+    suspend fun load() {
+        if (busy || submitting) return
+        busy = true
+        try {
+            state = HandoverRepository.load(conversationId)
+            error = null
+        } catch (e: CancellationException) { throw e
+        } catch (e: Exception) { error = e.userMessage()
+        } finally { busy = false }
+    }
+    if (showConfirm) AlertDialog(
+        onDismissRequest = { showConfirm = false },
+        title = { Text("Xác nhận phần của bạn?") },
+        text = { Text("Chỉ xác nhận khi bạn đã trao/nhận đúng món đồ. Khi cả hai xác nhận, bài được đánh dấu đã giải quyết và hội thoại chỉ còn đọc.") },
+        dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Quay lại") } },
+        confirmButton = {
+            TextButton(onClick = {
+                val current = state
+                if (!submitting && !busy && error == null && current?.status == "PASSED" && current.ownConfirmedAt == null) {
+                    showConfirm = false
+                    submitting = true
+                    scope.launch {
+                        try {
+                            val response = HandoverRepository.confirm(current.conversation.claimId)
+                            state = current.copy(status = response.status, authorConfirmedAt = response.authorConfirmedAt, claimantConfirmedAt = response.claimantConfirmedAt)
+                            notice = "Máy chủ đã ghi nhận xác nhận của bạn."
+                        } catch (e: CancellationException) { throw e
+                        } catch (e: Exception) {
+                            notice = if (e is ApiException && e.status in 400..499) "Không thể xác nhận: ${e.userMessage()}"
+                                else "Chưa xác nhận được kết quả. Tải lại trạng thái trước khi thử lại. ${e.userMessage()}"
+                        } finally { submitting = false }
+                        load()
                     }
                 }
-            }
-
-            // Progress
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 13.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HandoverProgressStep("1", "Xác minh", true)
-                HandoverProgressLine()
-                HandoverProgressStep("2", "Chat", true)
-                HandoverProgressLine()
-                HandoverProgressStep("3", "Trao trả", true)
-                HandoverProgressLine()
-                HandoverProgressStep("4", "Hoàn tất", false)
-            }
-
-            // Owner
-            HandoverPersonCard(
-                initials = "HN",
-                name = "Hoàng Nam (người nhặt)",
-                subtitle = "Chủ bài đăng",
-                confirmed = true
-            )
-
-            Spacer(modifier = Modifier.height(9.dp))
-
-            // Claimant
-            HandoverPersonCard(
-                initials = "MA",
-                name = "Bạn (người mất)",
-                subtitle = "Người nhận đồ",
-                confirmed = false
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Warning
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = HandoverYellow,
-                shape = RoundedCornerShape(11.dp)
-            ) {
-                Text(
-                    text = "Chỉ xác nhận khi bạn đã nhận lại đúng tài sản. Khi cả hai cùng xác nhận, bài đăng sẽ chuyển sang trạng thái hoàn tất.",
-                    modifier = Modifier.padding(12.dp),
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp,
-                    color = Color(0xFF796B32)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Confirm button
-            Button(
-                onClick = { showConfirmDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp),
-                shape = RoundedCornerShape(9.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = HandoverBlue
-                )
-            ) {
-                Text(
-                    text = "Tôi đã nhận lại tài sản",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Problem button
-            OutlinedButton(
-                onClick = { showProblemDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                shape = RoundedCornerShape(9.dp),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    HandoverRed
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = HandoverRed
-                )
-            ) {
-                Text(
-                    text = "Chưa nhận được / Có vấn đề",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
+            }, enabled = !busy && !submitting) { Text("Xác nhận") }
         }
-    }
-
-    // Confirmation dialog
-    if (showConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showConfirmDialog = false
-            },
-            title = {
-                Text("Xác nhận đã nhận tài sản?")
-            },
-            text = {
-                Text(
-                    "Bạn xác nhận đã nhận lại đúng món đồ từ người nhặt?"
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showConfirmDialog = false
-                        onConfirmReceived()
-                    }
-                ) {
-                    Text("Xác nhận")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showConfirmDialog = false
-                    }
-                ) {
-                    Text("Hủy")
-                }
-            }
-        )
-    }
-
-    // Problem dialog
-    if (showProblemDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showProblemDialog = false
-            },
-            title = {
-                Text("Có vấn đề khi trao trả?")
-            },
-            text = {
-                Text(
-                    "Nếu bạn chưa nhận được tài sản, hãy tiếp tục trao đổi với người còn lại hoặc báo cáo vấn đề."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showProblemDialog = false
-                        onReportProblem()
-                    }
-                ) {
-                    Text("Tiếp tục")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showProblemDialog = false
-                    }
-                ) {
-                    Text("Đóng")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun HandoverPersonCard(
-    initials: String,
-    name: String,
-    subtitle: String,
-    confirmed: Boolean
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = HandoverWhite,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .background(
-                        Color(0xFFDCE9ED),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = initials,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = HandoverBlue
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 9.dp)
-            ) {
-                Text(
-                    text = name,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF35434A)
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 10.sp,
-                    color = Color.Gray
-                )
-            }
-
-            Surface(
-                color = if (confirmed) HandoverGreen else HandoverYellow,
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Text(
-                    text = if (confirmed) "✓ Đã xác nhận" else "Chờ xác nhận",
-                    modifier = Modifier.padding(
-                        horizontal = 8.dp,
-                        vertical = 5.dp
-                    ),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (confirmed) HandoverGreenText
-                    else Color(0xFF8B7433)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HandoverProgressStep(
-    number: String,
-    label: String,
-    completed: Boolean
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(23.dp)
-                .background(
-                    if (completed) HandoverGreenText
-                    else Color(0xFFB9C1C5),
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (completed) "✓" else number,
-                color = Color.White,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Text(
-            text = label,
-            modifier = Modifier.padding(top = 3.dp),
-            fontSize = 9.sp,
-            color = Color(0xFF46545B)
-        )
-    }
-}
-
-@Composable
-private fun HandoverProgressLine() {
-    Box(
-        modifier = Modifier
-            .width(16.dp)
-            .height(2.dp)
-            .background(Color(0xFFB9C1C5))
     )
+    val owner = LocalLifecycleOwner.current
+    LaunchedEffect(conversationId, owner) {
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) { load(); delay(5_000) }
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        TopBar("Trao trả", onBack)
+        if (submitting) LinearProgressIndicator(Modifier.fillMaxWidth())
+        when {
+            state == null && error != null -> ErrorView(error!!, { scope.launch { load() } })
+            state == null -> LoadingView()
+            else -> {
+                val current = state!!
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(current.conversation.postTitle ?: "Bài đăng không còn xem được", style = MaterialTheme.typography.titleLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Avatar(current.conversation.peerAvatar, current.conversation.peerName)
+                        Column {
+                            Text(current.conversation.peerName, style = MaterialTheme.typography.titleMedium)
+                            current.conversation.peerUsername?.let { Text("@$it") }
+                        }
+                    }
+                    Text(if (current.isAuthor) "Bạn là chủ bài" else "Bạn là người gửi yêu cầu")
+                    Text(if (current.ownConfirmedAt == null) "Bạn chưa xác nhận" else "Bạn đã xác nhận: ${Formatters.dateTime(current.ownConfirmedAt)}")
+                    Text(if (current.peerConfirmedAt == null) "Người còn lại chưa xác nhận" else "Người còn lại đã xác nhận: ${Formatters.dateTime(current.peerConfirmedAt)}")
+                    Text(when (current.status) {
+                        "COMPLETED" -> "Trao trả hoàn tất"
+                        "PASSED" -> if (current.ownConfirmedAt == null) "Chỉ xác nhận khi bạn đã trao/nhận đúng món đồ." else "Đang chờ người còn lại xác nhận."
+                        "SUBMITTED" -> "Yêu cầu đang chờ duyệt. Chưa thể xác nhận trao trả."
+                        "FAILED" -> "Yêu cầu đã bị từ chối. Không thể xác nhận trao trả."
+                        "CANCELLED" -> "Yêu cầu đã hủy. Không thể xác nhận trao trả."
+                        "CLOSED" -> "Yêu cầu đã đóng. Không thể xác nhận trao trả."
+                        else -> "Không thể xác nhận yêu cầu ở trạng thái hiện tại."
+                    })
+                    notice?.let { Text(it) }
+                    error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    if (current.status == "PASSED" && current.ownConfirmedAt == null) {
+                        Button(onClick = { showConfirm = true }, enabled = !busy && !submitting && error == null) { Text("Tôi đã trao/nhận đúng đồ") }
+                    }
+                    OutlinedButton(onClick = { scope.launch { load() } }, enabled = !busy && !submitting) { Text("Tải lại trạng thái") }
+                    TextButton(onClick = { onReport(conversationId, current.conversation.postTitle) }) { Text("Báo cáo vấn đề") }
+                }
+            }
+        }
+    }
 }

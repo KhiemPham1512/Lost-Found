@@ -84,7 +84,7 @@ hiện trạng thái trống. Ảnh thật có nút trước/sau và vuốt đ�
 Chủ bài thấy **Xem yêu cầu**, người khác đi vào luồng xác minh như trước. Bài Lost
 không có câu hỏi vẫn dùng **Gửi yêu cầu liên hệ**, không tự mở chat. Menu báo cáo
 giữ ID bài/người đăng thực tế. Phân quyền và trạng thái hợp lệ do server kiểm tra.
-Trao trả và thông báo của C vẫn chưa nối đủ dữ liệu thật; phạm vi chat chữ ở dưới.
+Thông báo và ảnh chat riêng tư vẫn chưa nối đủ dữ liệu thật; chat chữ/trao trả ở dưới.
 
 Bản sửa chi tiết/xác minh đã merge qua PR #42 (`47d53f9`). Build/cài APK và kiểm
 chứng Android được ghi riêng với trạng thái triển khai API/web; không có SQL hay
@@ -103,7 +103,7 @@ tải lại danh sách sau kết quả. Lỗi không tự gửi lại quyết đ
 trước khi thử lại vì request có thể đã được lưu. Không mở hội thoại mẫu sau khi duyệt;
 người dùng mở hội thoại từ tab Tin nhắn. Không thêm endpoint, SQL hay quyền mới.
 
-## Hội thoại và tin chữ (nhánh `feat/a-android-text-chat`, chưa merge)
+## Hội thoại và tin chữ (đã merge PR #44, `6c6e78f`)
 
 Tab Tin nhắn đọc hội thoại của người đang đăng nhập qua Supabase/RLS, hiện đúng
 người còn lại, bài đăng và trạng thái khóa; phân trang 20 mục và có **Tải lại**.
@@ -118,6 +118,25 @@ response đã lưu, chặn gửi lặp khi đang gửi. Request không phát l�
 khi truyền; lỗi giữ bản nháp và yêu cầu kiểm tra lịch sử trước khi gửi lại vì chưa có
 idempotency. Hội thoại đã khóa chỉ đọc; server vẫn chặn gửi nếu bị khóa giữa chừng.
 
-Báo cáo dùng đúng ID hội thoại. Đã bỏ đường sang trao trả mẫu từ chat; bàn giao thật
-là phạm vi tiếp theo. Tin IMAGE hiện nhãn ảnh, chưa gửi/mở ảnh riêng tư; rollout
+Báo cáo dùng đúng ID hội thoại. Chat mở trao trả theo hội thoại thật trong phần dưới.
+Tin IMAGE hiện nhãn ảnh, chưa gửi/mở ảnh riêng tư; rollout
 Storage chưa xác nhận. Không thêm SQL, endpoint, dependency hay quyền mới.
+
+## Trao trả (nhánh `feat/a-android-handover`, chưa merge)
+
+Từ chat mở đúng hội thoại/yêu cầu; lối tắt **Chờ xác nhận trao trả** ở Home dẫn
+tới danh sách hội thoại để chọn giao dịch. Màn trao trả đọc trạng thái và thời điểm
+xác nhận qua Supabase/RLS, phân biệt phần của mình với người còn lại từ ID thật.
+Không gán sẵn ai đã xác nhận hay suy ra vai trò chủ đồ từ chủ bài.
+
+Khi `PASSED` và mình chưa xác nhận, app có dialog trước khi gọi
+`POST /claims/{claim_id}/confirm`. Server xác định bên xác nhận từ token, app không
+gửi vai trò/trạng thái. Chặn bấm lặp và phát lại HTTP; lỗi tải lại trạng thái trước
+khi thử tiếp. Một bên xác nhận chỉ hiện chờ bên kia. Chỉ hiện hoàn tất khi server
+trả `COMPLETED`; quay lại chat đọc trạng thái khóa thật và bỏ ô gửi.
+
+Trạng thái tự đọc lại mỗi 5 giây khi RESUMED; có tải lại, lỗi/thử lại, quay lại và báo
+cáo đúng hội thoại (lý do Khác được chọn sẵn). Không chuyển tới thông báo mẫu khi
+hoàn tất. Bài đã giải quyết có thể bị RLS ẩn với người gửi yêu cầu; khi đó dùng nhãn
+bài không còn xem được, vẫn đọc lịch sử hội thoại theo quyền hiện hành.
+Không thêm SQL, endpoint, trạng thái hay dependency; thông báo thật là phần tiếp theo.
