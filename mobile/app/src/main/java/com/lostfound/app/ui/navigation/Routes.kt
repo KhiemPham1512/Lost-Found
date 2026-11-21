@@ -34,7 +34,7 @@ object Routes {
     const val VERIFY = "verify/{postId}"
     const val CLAIM_REVIEW = "claim_review/{postId}"
     const val CHAT = "chat/{conversationId}"
-    const val HANDOVER = "handover"
+    const val HANDOVER = "handover/{conversationId}"
     const val NOTIFICATIONS = "notifications"
 
     val AUTH_ROUTES = setOf(SPLASH, LOGIN, REGISTER, FORGOT_PASSWORD)
@@ -44,6 +44,7 @@ object Routes {
     fun verify(postId: String) = "verify/$postId"
     fun claimReview(postId: String) = "claim_review/$postId"
     fun chat(conversationId: String) = "chat/$conversationId"
+    fun handover(conversationId: String) = "handover/$conversationId"
 
     fun report(
         target: ReportTarget,

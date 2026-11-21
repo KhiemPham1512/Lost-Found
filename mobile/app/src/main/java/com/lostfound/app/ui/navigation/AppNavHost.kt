@@ -157,7 +157,7 @@ fun AppNavHost() {
                     onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                     onOpenPendingVerifications = { navController.openTab(Routes.MY_POSTS) },
                     onOpenUnreadMessages = { navController.openTab(Routes.MESSAGES) },
-                    onOpenAwaitingHandover = { navController.navigate(Routes.HANDOVER) },
+                    onOpenAwaitingHandover = { navController.openTab(Routes.MESSAGES) },
                     onCreatePost = { navController.navigate(Routes.CREATE_POST) },
                     onReport = openReport
                 )
@@ -274,16 +274,15 @@ fun AppNavHost() {
                 ChatScreen(
                     conversationId = entry.arguments?.getString("conversationId").orEmpty(),
                     onBack = { navController.popBackStack() },
-                    onReport = { id, title -> openReport(ReportTarget.CONVERSATION, id, title) }
+                    onReport = { id, title -> openReport(ReportTarget.CONVERSATION, id, title) },
+                    onOpenHandover = { navController.navigate(Routes.handover(entry.arguments?.getString("conversationId").orEmpty())) }
                 )
             }
-            composable(Routes.HANDOVER) {
+            composable(Routes.HANDOVER, arguments = listOf(navArgument("conversationId") { type = NavType.StringType })) { entry ->
                 HandoverScreen(
-                    onConfirmReceived = { navController.navigate(Routes.NOTIFICATIONS) },
-                    // TODO(C): khi màn Trao trả có mã hội thoại thật, mở form báo cáo bằng:
-                    // navController.navigate(Routes.report(ReportTarget.CONVERSATION, conversationId,
-                    //     reason = ReportReason.OTHER, title = "Chưa nhận được đồ / có vấn đề"))
-                    onReportProblem = { navController.navigate(Routes.SENT_REPORTS) }
+                    conversationId = entry.arguments?.getString("conversationId").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                    onReport = { id, title -> navController.navigate(Routes.report(ReportTarget.CONVERSATION, id, ReportReason.OTHER, title)) }
                 )
             }
             composable(Routes.NOTIFICATIONS) {

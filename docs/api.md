@@ -526,6 +526,13 @@ Mỗi bên bấm xác nhận của mình. Không cần body. Backend tự biết
 Khi **cả hai bên đã xác nhận**, `status` trả về là `COMPLETED`. Lúc đó database tự: chuyển bài sang `RESOLVED`, đóng các yêu cầu khác của bài, khóa cuộc trò chuyện, và gửi thông báo cho cả hai. Gọi lại sau khi đã `COMPLETED` vẫn trả `200` với trạng thái hiện tại.
 Lỗi: `403` bạn không thuộc yêu cầu này · `404` · `409` yêu cầu chưa ở bước trao trả (còn `SUBMITTED`) hoặc đã kết thúc (`FAILED`, `CANCELLED`, `CLOSED`), hoặc bài không còn hoạt động.
 
+**Android (nhánh `feat/a-android-handover`, chưa merge):** trao trả mở từ hội thoại
+thật, đọc hai thời điểm xác nhận qua Supabase/RLS; `confirm` không gửi vai trò hay
+trạng thái từ client. Có dialog, chặn bấm lặp/phát lại HTTP, tải lại sau kết quả hoặc
+lỗi. Một bên vẫn `PASSED`, chỉ hoàn tất theo `COMPLETED` của server; chat sau đó
+chỉ đọc theo trạng thái khóa thật. Báo cáo giữ ID hội thoại; không mở thông báo mẫu.
+Không đổi backend/schema; build/thiết bị và merge/deploy được ghi riêng trong PR/handoff.
+
 ### 3.6 Báo cáo
 
 #### `POST /reports` ✅
@@ -813,7 +820,7 @@ Bảng `verification_questions` chỉ **chủ bài** đọc trực tiếp đư�
 | Đánh dấu thông báo đã đọc ("Đọc hết") | Cập nhật `notifications.read_at` |
 | Sửa hồ sơ | Cập nhật `profiles`: chỉ các cột `display_name`, `avatar_url`, `bio` (tối đa 160 ký tự) |
 
-**Android chat chữ (nhánh `feat/a-android-text-chat`, chưa merge):** inbox và lịch
+**Android chat chữ (đã merge PR #44, `6c6e78f`):** inbox và lịch
 sử đọc Supabase/RLS bằng ID thật; inbox 20 mục/trang, tin nhắn 50 mục với con trỏ
 `id` giảm dần. Chat polling 5 giây khi RESUMED, chưa dùng WebSocket Realtime.
 Chèn TEXT qua token người gửi, không phát lại body sau khi truyền; lỗi giữ bản nháp

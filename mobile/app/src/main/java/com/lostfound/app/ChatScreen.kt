@@ -25,7 +25,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 
 @Composable
-fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit) {
+fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit, onOpenHandover: () -> Unit) {
     val scope = rememberCoroutineScope()
     var chat by remember(conversationId) { mutableStateOf<Conversation?>(null) }
     var messages by remember(conversationId) { mutableStateOf<List<ChatMessage>>(emptyList()) }
@@ -76,6 +76,7 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
                 Text(chat!!.postTitle ?: "Bài đăng không còn xem được", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.titleMedium)
                 chat!!.peerUsername?.let { Text("@$it", Modifier.padding(horizontal = 16.dp)) }
                 if (chat!!.locked) Text("Hội thoại đã khóa · Chỉ đọc", Modifier.padding(16.dp))
+                OutlinedButton(onClick = onOpenHandover, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Xác nhận trao trả") }
                 TextButton(onClick = { scope.launch { load() } }, enabled = !busy) { Text("Tải lại") }
                 readError?.let { Text(it, Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.error) }
                 LazyColumn(Modifier.weight(1f), reverseLayout = true, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

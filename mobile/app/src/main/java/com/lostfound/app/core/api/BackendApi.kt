@@ -59,6 +59,10 @@ object BackendApi {
     suspend fun decideClaim(claimId: String, decision: String): JSONObject =
         send("POST", "/claims/$claimId/decision", JSONObject().put("decision", decision), oneShot = true)
 
+    /** Server xác định bên xác nhận từ token, không nhận vai trò hay trạng thái từ client. */
+    suspend fun confirmClaim(claimId: String): JSONObject =
+        send("POST", "/claims/$claimId/confirm", JSONObject(), oneShot = true)
+
     /** PATCH /posts/{id}/status với ARCHIVED, ACTIVE hoặc DELETED. */
     suspend fun changePostStatus(postId: String, status: String): JSONObject =
         send("PATCH", "/posts/$postId/status", JSONObject().put("status", status))
