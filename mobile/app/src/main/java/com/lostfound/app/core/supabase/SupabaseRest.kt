@@ -80,6 +80,24 @@ object SupabaseRest {
         ).orThrow()
     }
 
+    /** Ảnh hội thoại chỉ qua bucket private, không phát lại upload hoặc ghi đè object. */
+    suspend fun uploadChatImage(path: String, jpeg: ByteArray) {
+        val content = jpeg.toRequestBody("image/jpeg".toMediaType())
+        val once = object : okhttp3.RequestBody() {
+            override fun isOneShot() = true
+            override fun contentType() = content.contentType()
+            override fun contentLength() = content.contentLength()
+            override fun writeTo(sink: okio.BufferedSink) = content.writeTo(sink)
+        }
+        Http.execute(authed("${AppConfig.supabaseUrl}/storage/v1/object/chat-images/$path")
+            .header("x-upsert", "false").header("Cache-Control", "max-age=0")
+            .post(once).build()).orThrow()
+    }
+
+    suspend fun chatImageRequest(path: String): Request =
+        authed("${AppConfig.supabaseUrl}/storage/v1/object/authenticated/chat-images/$path")
+            .header("Cache-Control", "no-store").get().build()
+
     /** Xóa các file của chính mình (dọn ảnh đã upload khi đăng bài thất bại). Bỏ qua lỗi. */
     suspend fun removeImages(paths: List<String>) {
         if (paths.isEmpty()) return

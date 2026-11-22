@@ -3,18 +3,20 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
-**Ảnh hội thoại admin (nhánh feature, chưa merge/deploy):** sau khi bấm xem tin
+**Ảnh hội thoại admin (PR #37 đã merge; viewer hosted chưa kiểm chứng):** sau khi bấm xem tin
 nhắn, admin có thể bấm Xem ảnh trên tin `IMAGE`. Viewer tải ảnh riêng tư qua
 link ngắn hạn do backend cấp, có loading/lỗi/thử lại, đóng/Escape và trả focus.
 Hết phiên xem thì ẩn ảnh, cần bấm tải lại để kiểm tra quyền và cấp link mới.
-Phần này cần SQL patch bucket `chat-images` riêng tư; chưa áp dụng trên live.
+SQL patch bucket `chat-images` riêng tư đã áp dụng trên live ngày 22/11/2026
+sau khi được duyệt riêng; kiểm tra bucket private và quyền Storage thật đã đạt.
 Không dùng bucket ảnh bài đăng công khai để lưu ảnh chat. Contract chi tiết ở
 mục 3.7 và Storage ở mục 4.5. Figma tiếp tục được hoãn.
 
 Kiểm chứng local: 122 test backend trên PostgreSQL cô lập đạt, mypy 34 file;
 43 test browser đạt, 2 probe cũ bỏ qua; build TypeScript/Vite đạt. Có kiểm tra
 quyền/path/ký URL giả lập, RLS Storage, lỗi/thử lại/hết hạn/focus và giao diện
-375/768/1024/1440px. Chưa xác nhận upload/ký URL Storage thật hoặc viewer hosted.
+375/768/1024/1440px. Upload/đọc Storage thật đã kiểm chứng riêng ngày 22/11/2026;
+chưa xác nhận ký URL admin hoặc viewer hosted.
 
 **Chi tiết catalog admin (PR #36 đã merge/deploy):** danh sách bài và
 người dùng có nút Xem riêng bên cạnh kiểm duyệt. Mở bài → xem người đăng → quay
@@ -869,9 +871,10 @@ hoặc thay đổi dữ liệu cũ. Chưa kiểm tra Photo Picker/nén ảnh tr�
 thao tác xóa Storage; không suy ra giới hạn MIME/dung lượng bucket từ các kiểm
 tra này (cấu hình bucket hiện không đặt hai giới hạn đó).
 
-#### Ảnh chat riêng tư (nhánh feature, chưa áp dụng live)
+#### Ảnh chat riêng tư
 
-Project hiện tại cần chạy `supabase/patches/20261111_private_chat_images.sql`
+Project hiện tại đã áp dụng `supabase/patches/20261111_private_chat_images.sql`
+ngày 22/11/2026 sau khi người dùng duyệt riêng. Với project chưa có bucket, chạy patch
 bằng quyền owner trong một transaction; không chạy reset hoặc chạy lại toàn bộ
 schema trên database có dữ liệu. Project mới dùng `schema.sql` đã có cấu hình này.
 
@@ -888,9 +891,22 @@ schema trên database có dữ liệu. Project mới dùng `schema.sql` đã có
   tên đã tồn tại, cấu hình cũ được giữ; xác minh nó private trước khi dùng.
   Path cũ/không hợp lệ trong `messages` được giữ nguyên, viewer từ chối mở.
 
-Schema/RLS/HTTP đã kiểm tra trên DB test cô lập; chưa kiểm chứng upload/ký URL
-bằng Storage thật cho bucket này và chưa áp dụng patch trên live. Không thể suy
-ra tính năng gửi ảnh Android đã hoàn tất từ viewer admin.
+Schema/RLS/HTTP đã kiểm tra trên DB test cô lập. Kiểm chứng Storage live ngày
+22/11/2026 bằng ảnh QA: bucket private, upload đúng thư mục và đọc bằng hai thành
+viên đạt; người ngoài, admin không tham gia, ẩn danh, URL public và upload giả thư
+mục người gửi bị từ chối. Chưa kiểm chứng ký URL admin/viewer hosted.
+
+Android trên nhánh `feat/a-android-chat-images` (chưa merge): Photo Picker một ảnh,
+xem trước/bỏ ảnh, nén JPEG bằng bộ nén hiện có rồi upload private trước khi ghi
+`messages` loại `IMAGE`. Chỉ hiện tin gửi thành công khi server trả bản ghi;
+không tự gửi lại upload/tin nhắn. Giữ bản nháp và cảnh báo kiểm tra lịch sử khi
+chưa rõ kết quả. Không DELETE upload vì bucket chưa có quyền cleanup; có thể còn
+object mồ côi khi ghi tin thất bại. Cần cleanup phía server riêng.
+Viewer Android kiểm tra path khớp conversation/sender và tải qua endpoint
+`/storage/v1/object/authenticated/chat-images/<path>` bằng JWT hiện tại, không dùng
+URL public/link admin. Tắt cache ảnh trong Coil; có loading/lỗi/thử lại/đóng.
+Chat khóa vẫn xem lịch sử, không chọn/gửi ảnh. Đây là trạng thái implementation;
+kiểm chứng APK/thiết bị, merge và phát hành phải được ghi riêng trong PR/handoff.
 
 ### 4.6 Realtime
 Đăng ký lắng nghe sự kiện thêm dòng (INSERT):

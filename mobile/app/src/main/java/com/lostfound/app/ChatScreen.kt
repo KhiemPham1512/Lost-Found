@@ -8,6 +8,16 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import com.lostfound.app.core.image.ImageCompressor
 import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.core.network.ApiException
 import com.lostfound.app.core.util.Formatters
@@ -27,6 +37,7 @@ import androidx.lifecycle.repeatOnLifecycle
 @Composable
 fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit, onOpenHandover: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var chat by remember(conversationId) { mutableStateOf<Conversation?>(null) }
     var messages by remember(conversationId) { mutableStateOf<List<ChatMessage>>(emptyList()) }
     var busy by remember(conversationId) { mutableStateOf(false) }
@@ -36,6 +47,11 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
     var sending by remember(conversationId) { mutableStateOf(false) }
     var sendError by remember(conversationId) { mutableStateOf<String?>(null) }
     var readError by remember(conversationId) { mutableStateOf<String?>(null) }
+    var selectedImage by remember(conversationId) { mutableStateOf<Uri?>(null) }
+    var viewingImage by remember(conversationId) { mutableStateOf<ChatMessage?>(null) }
+    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (!sending) { selectedImage = uri; sendError = null }
+    }
     suspend fun load(before: Long? = null) {
         if (busy) return
         busy = true
@@ -91,7 +107,9 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
                             ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     Text(if (message.type == "SYSTEM") "Hệ thống" else if (mine) "Bạn" else chat!!.peerName, style = MaterialTheme.typography.labelSmall)
-                                    Text(if (message.type == "IMAGE") "Tin nhắn ảnh" else message.content.orEmpty())
+                                    if (message.type == "IMAGE") {
+                                        TextButton(onClick = { viewingImage = message }) { Text("Xem ảnh riêng tư") }
+                                    } else Text(message.content.orEmpty())
                                     Text(Formatters.dateTime(message.createdAt), style = MaterialTheme.typography.bodySmall)
                                 }
                             }
@@ -107,6 +125,21 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
                 if (!chat!!.locked) {
                     val content = draft.trim()
                     val count = content.codePointCount(0, content.length)
+                    TextButton(onClick = {
+                        pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }, enabled = !sending) { Text("Chọn ảnh") }
+                    selectedImage?.let { uri ->
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(uri)
+                                    .memoryCachePolicy(CachePolicy.DISABLED).diskCachePolicy(CachePolicy.DISABLED).build(),
+                                contentDescription = "Ảnh đã chọn, chưa gửi",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(88.dp)
+                            )
+                            TextButton(onClick = { selectedImage = null }, enabled = !sending) { Text("Bỏ ảnh") }
+                        }
+                    }
                     OutlinedTextField(
                         value = draft,
                         onValueChange = { draft = it },
@@ -119,16 +152,18 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
                     )
                     Button(
                         onClick = {
-                            if (!sending && count in 1..2000) {
+                            if (!sending && (selectedImage != null || count in 1..2000)) {
+                                val image = selectedImage
                                 sending = true
                                 sendError = null
                                 scope.launch {
                                     try {
-                                        val sent = ChatRepository.send(conversationId, content)
+                                        val sent = if (image == null) ChatRepository.send(conversationId, content)
+                                            else ChatRepository.sendImage(conversationId, ImageCompressor.compress(context, image))
                                         // Quay về cửa sổ mới nhất; tin gửi có thể cách lịch sử cũ hơn 50 mục.
                                         messages = listOf(sent)
                                         older = true
-                                        draft = ""
+                                        if (image == null) draft = "" else selectedImage = null
                                         load()
                                     } catch (e: CancellationException) { throw e
                                     } catch (e: Exception) {
@@ -140,11 +175,14 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
                                 }
                             }
                         },
-                        enabled = !sending && count in 1..2000,
+                        enabled = !sending && (selectedImage != null || count in 1..2000),
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) { Text(if (sending) "Đang gửi…" else "Gửi") }
+                    ) { Text(if (sending) "Đang gửi…" else if (selectedImage != null) "Gửi ảnh" else "Gửi") }
                 }
             }
         }
+    }
+    viewingImage?.let { image ->
+        com.lostfound.app.ui.chat.ChatImageDialog(conversationId, image, onDismiss = { viewingImage = null })
     }
 }
