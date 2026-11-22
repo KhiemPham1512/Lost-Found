@@ -3,6 +3,13 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
+**Android chi tiết bài đăng (nhánh `feat/a-android-recovery`, chưa merge):**
+lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;
+kết quả rỗng dưới RLS vẫn là bài không xem được. Tải lại chỉ đọc dữ liệu,
+không gửi lại yêu cầu xác minh. Đổi bài bỏ dữ liệu cũ và hủy lượt tải trước.
+Trạng thái kiểm thử thiết bị và tích hợp được ghi trong PR/handoff; merge
+không tự cập nhật APK đã cài trên điện thoại. Không đổi API hay quyền RLS.
+
 **Ảnh hội thoại admin (PR #37 đã merge; viewer hosted chưa kiểm chứng):** sau khi bấm xem tin
 nhắn, admin có thể bấm Xem ảnh trên tin `IMAGE`. Viewer tải ảnh riêng tư qua
 link ngắn hạn do backend cấp, có loading/lỗi/thử lại, đóng/Escape và trả focus.
