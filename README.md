@@ -104,7 +104,7 @@ flowchart LR
 | Việc cần làm | Đi đường nào | Vì sao |
 |---|---|---|
 | Xem bảng tin, tìm kiếm, xem chi tiết | App → Supabase (PostgREST / RPC `search_posts`) | Nhanh, ít code, RLS tự chặn dữ liệu không được xem |
-| Gửi / nhận tin nhắn | App → Supabase Realtime | Realtime, độ trễ thấp |
+| Gửi / nhận tin nhắn | Ghi qua PostgREST; nhận tín hiệu Realtime rồi đọc lại dưới RLS | Không dùng broadcast làm bản ghi tin nhắn |
 | Upload ảnh | App → Supabase Storage | Không tốn băng thông backend |
 | Đăng ký tài khoản | App → **FastAPI** | Kiểm tra email/password ở server, tự tạo hồ sơ và handle công khai |
 | Đăng nhập, quên / đổi mật khẩu | App → Supabase Auth | Dùng sẵn, không cần viết lại |
@@ -127,7 +127,7 @@ flowchart LR
 | Kiến trúc | MVVM (UI → ViewModel → Repository), Kotlin Coroutines + Flow |
 | Điều hướng | Navigation Compose |
 | Dependency Injection | Hilt (hoặc Koin) |
-| Kết nối Supabase | `supabase-kt` (Auth, Postgrest, Storage, Realtime) |
+| Kết nối Supabase | OkHttp gọi Auth, PostgREST và Storage; WebSocket cho Realtime trên nhánh tích hợp tương ứng (xem `docs/api.md`) |
 | Gọi FastAPI | Retrofit + OkHttp + kotlinx.serialization |
 | Hiển thị ảnh | Coil |
 | Phân trang bảng tin | Paging 3 |

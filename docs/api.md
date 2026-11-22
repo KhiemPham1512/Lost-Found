@@ -828,19 +828,21 @@ theo `read_at`. Mở mục chỉ đánh dấu ID đó; Đọc hết giới hạn
 mình tới khóa sắp xếp mới nhất đã tải (cả các trang cũ), không đánh dấu khóa mới hơn.
 Chỉ ghi `read_at` và tải lại sau phản hồi. Đích dùng `post_id`/`claim_id` thực tế;
 tra hội thoại theo claim dưới RLS, không parse nội dung hoặc bịa ID báo cáo.
-Thiếu đích thì đọc nội dung tại chỗ, đích bị ẩn/bị mất thì báo lỗi. Chưa có push/
-WebSocket/FCM; tải lại khi mở màn hoặc người dùng yêu cầu. Không đổi backend/schema;
+Thiếu đích thì đọc nội dung tại chỗ, đích bị ẩn/bị mất thì báo lỗi. Bản PR #46
+tải lại khi mở màn hoặc người dùng yêu cầu; nhánh realtime được ghi riêng ở mục 4.6.
+Chưa có push/FCM khi app đóng. Không đổi backend/schema;
 build/thiết bị và merge/deploy được ghi riêng trong PR/handoff.
 
 **Android chat chữ (đã merge PR #44, `6c6e78f`):** inbox và lịch
 sử đọc Supabase/RLS bằng ID thật; inbox 20 mục/trang, tin nhắn 50 mục với con trỏ
-`id` giảm dần. Chat polling 5 giây khi RESUMED, chưa dùng WebSocket Realtime.
+`id` giảm dần. Bản PR #44 dùng polling 5 giây khi RESUMED; phần thay thế bằng
+WebSocket trên nhánh realtime được ghi riêng ở mục 4.6.
 Chèn TEXT qua token người gửi, không phát lại body sau khi truyền; lỗi giữ bản nháp
 và cần kiểm tra lịch sử trước khi gửi lại (chưa có idempotency). Đánh dấu đã đọc
 chỉ các ID đã tải, chưa đọc và do người khác/hệ thống gửi. Khóa hội thoại vẫn cho
 đọc lịch sử, không cho gửi; phân quyền cuối cùng do RLS. Báo cáo giữ ID hội thoại.
-Không có SQL/endpoint mới, chưa nối ảnh riêng tư hoặc bàn giao; trạng thái build,
-thiết bị, merge và deploy được ghi riêng trong PR/handoff.
+Không có SQL/endpoint mới. Bàn giao đã nối ở PR #45, ảnh riêng tư ở PR #47;
+trạng thái build, thiết bị, merge và deploy được ghi riêng trong PR/handoff.
 
 ### 4.5 Upload ảnh
 Bucket `post-images`. Thư mục đầu **bắt buộc là ID của chính bạn**, nếu không bị
@@ -896,7 +898,7 @@ Schema/RLS/HTTP đã kiểm tra trên DB test cô lập. Kiểm chứng Storage 
 viên đạt; người ngoài, admin không tham gia, ẩn danh, URL public và upload giả thư
 mục người gửi bị từ chối. Chưa kiểm chứng ký URL admin/viewer hosted.
 
-Android trên nhánh `feat/a-android-chat-images` (chưa merge): Photo Picker một ảnh,
+Android đã merge PR #47 (`fe2f454`): Photo Picker một ảnh,
 xem trước/bỏ ảnh, nén JPEG bằng bộ nén hiện có rồi upload private trước khi ghi
 `messages` loại `IMAGE`. Chỉ hiện tin gửi thành công khi server trả bản ghi;
 không tự gửi lại upload/tin nhắn. Giữ bản nháp và cảnh báo kiểm tra lịch sử khi
@@ -913,6 +915,23 @@ kiểm chứng APK/thiết bị, merge và phát hành phải được ghi riên
 - `messages` lọc theo `conversation_id` (màn chat).
 - `notifications` lọc theo `user_id` (chuông thông báo).
 - `claims` (người trả lời biết ngay khi được Pass hoặc bị Fail).
+
+**Android, nhánh `feat/a-android-realtime` (chưa merge):** chat đang mở đăng ký
+`messages INSERT` theo `conversation_id` và `claims UPDATE` theo claim thật để
+đọc lại trạng thái khóa. Màn thông báo đăng ký `INSERT`/`UPDATE` theo `user_id`
+của phiên hiện tại. WebSocket dùng JWT, kiểm tra topic/ID đăng ký/bảng/loại sự kiện
+và bộ lọc trước khi yêu cầu đọc lại REST dưới RLS; không ghép payload vào UI.
+Kết nối chỉ tồn tại khi màn hình RESUMED, đóng khi rời màn/đăng xuất/đổi tài khoản;
+token xoay thì nối lại bằng JWT mới. Heartbeat có kiểm tra phản hồi, join có hạn
+chờ; lỗi nối lại với khoảng nghỉ tăng từ 1 đến 30 giây. Sau khi đăng ký/nối lại
+thành công luôn đọc bù. Giữ nút tải lại và đọc bù 30 giây để phục hồi sự kiện lỡ.
+Nhãn UI phân biệt trực tiếp với đang kết nối lại.
+
+Màn thông báo đọc lại trang mới nhất khi có sự kiện, cùng hành vi với tải lại
+thủ công. Inbox và màn nộp câu trả lời chưa có đăng ký riêng; không bổ sung push
+FCM/thông báo hệ điều hành khi app đóng. Live đã có publication cho ba bảng trên;
+nhánh không đổi SQL, RLS, Auth, backend hoặc dependency. Kết quả thiết bị/kiểm thử
+và merge/phát hành phải được ghi riêng trong PR/handoff.
 
 ---
 

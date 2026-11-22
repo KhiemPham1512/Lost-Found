@@ -20,6 +20,17 @@ Khi ai đó hỏi "sao lại làm vậy?" thì mở file này. Các dòng dướ
 
 ## Phân công
 
+### Realtime Android khi màn hình đang mở
+
+Nhánh `feat/a-android-realtime` dùng WebSocket của OkHttp hiện có và protocol
+Supabase Realtime v1, tránh thêm SDK chỉ để nhận tín hiệu thay đổi. Event không
+trở thành bản ghi UI: ứng dụng đọc lại qua REST dưới RLS, bao gồm đọc bù sau khi
+nối lại và định kỳ 30 giây. Subscription theo màn hình RESUMED, JWT hiện tại và
+ID thật; đổi phiên hoặc rời màn thì đóng kết nối. Việc này giảm polling chat từ
+5 giây, không cung cấp push khi app đóng. Heartbeat, timeout, token refresh và
+reconnect là trách nhiệm client; phải giữ test giao thức và kiểm tra Storage/
+Realtime thật riêng với test HTTP giả lập. Trạng thái merge/thiết bị ở handoff/PR.
+
 ### Ảnh chat riêng tư và viewer admin
 
 Ảnh tin nhắn dùng bucket `chat-images` riêng tư, path theo conversation và người

@@ -29,10 +29,9 @@ import com.lostfound.app.data.repository.MessageHistory
 import com.lostfound.app.ui.components.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
+import com.lostfound.app.core.supabase.RealtimeFilter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Composable
 fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, String?) -> Unit, onOpenHandover: () -> Unit) {
@@ -52,8 +51,8 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (!sending) { selectedImage = uri; sendError = null }
     }
-    suspend fun load(before: Long? = null) {
-        if (busy) return
+    val loadMutex = remember(conversationId) { Mutex() }
+    suspend fun load(before: Long? = null) = loadMutex.withLock {
         busy = true
         error = null
         try {
@@ -70,21 +69,19 @@ fun ChatScreen(conversationId: String, onBack: () -> Unit, onReport: (String, St
         } catch (e: Exception) { error = e.userMessage()
         } finally { busy = false }
     }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    // shortcut: đọc lại mỗi 5 giây khi mở chat; dùng Realtime khi cần giảm độ trễ hoặc số request.
-    LaunchedEffect(conversationId, lifecycleOwner) {
-        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            while (true) {
-                load()
-                delay(5_000)
-            }
+    val filters = remember(conversationId, chat?.claimId) {
+        buildList {
+            add(RealtimeFilter("messages", "INSERT", "conversation_id=eq.$conversationId"))
+            chat?.claimId?.let { add(RealtimeFilter("claims", "UPDATE", "id=eq.$it")) }
         }
     }
+    val connected = rememberRealtimeRefresh(filters) { load() }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         TopBar(chat?.peerName ?: "Hội thoại", onBack) {
             if (chat != null) TextButton(onClick = { onReport(conversationId, chat?.postTitle) }) { Text("Báo cáo") }
         }
+        Text(if (connected) "Cập nhật trực tiếp" else "Đang kết nối lại · Có thể tải lại", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
         when {
             error != null -> ErrorView(error!!, { scope.launch { load() } }, Modifier.weight(1f))
             chat == null -> LoadingView(Modifier.weight(1f))
