@@ -395,6 +395,13 @@ Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện t�
 
 ### 3.4 Xác minh quyền sở hữu
 
+**Android (nhánh `feat/a-android-draft-recreation`, chưa merge):** câu trả lời
+chưa gửi được giữ qua cơ chế khôi phục trạng thái màn hình, tách theo tài khoản,
+bài đăng và bộ câu hỏi. Khôi phục không tự gửi yêu cầu hay giữ một thao tác gửi
+đang chạy; màn hình vẫn đọc lại quyền/trạng thái hiện tại từ API. Không cam kết
+giữ bản nháp sau force-stop/xóa dữ liệu ứng dụng. Kiểm chứng và trạng thái tích
+hợp/APK được ghi riêng trong PR/handoff; không đổi API hoặc số lượt thử.
+
 > Người **đăng bài** luôn là người đặt câu hỏi và chấm Pass/Fail. Người còn lại (gọi là *claimant*) là người trả lời.
 > Bài **Found**: claimant là người nhận mình là chủ đồ. Bài **Lost**: claimant là người nói đã nhặt được đồ.
 

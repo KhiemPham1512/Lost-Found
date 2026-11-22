@@ -10,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lostfound.app.data.model.Post
 import com.lostfound.app.core.AppConfig
+import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.core.util.Formatters
 import com.lostfound.app.ui.components.TopBar
 import com.lostfound.app.ui.components.TypeBadge
@@ -39,9 +43,14 @@ fun VerifyScreen(
     onSubmit: (List<String>) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
-    val answers = remember(questions) {
-        mutableStateListOf<String>().apply {
-            repeat(questions.size) { add("") }
+    val answers = key(post.id, SessionStore.userId, questions) {
+        rememberSaveable(saver = listSaver<SnapshotStateList<String>, String>(
+            save = { it.toList() },
+            restore = { it.toMutableStateList() }
+        )) {
+            mutableStateListOf<String>().apply {
+                repeat(questions.size) { add("") }
+            }
         }
     }
 
