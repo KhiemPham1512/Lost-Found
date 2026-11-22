@@ -257,7 +257,7 @@ fun AppNavHost() {
                 VerifyApiScreen(
                     postId = entry.arguments?.getString("postId").orEmpty(),
                     onBack = { navController.popBackStack() },
-                    onSubmitSuccess = { _, _ -> navController.popBackStack() }
+                    onOpenChat = { navController.navigate(Routes.chat(it)) }
                 )
             }
             composable(

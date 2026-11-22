@@ -35,6 +35,7 @@ fun VerifyScreen(
     post: Post,
     questions: List<String> = emptyList(),
     attemptsLeft: Int = 2,
+    submitting: Boolean = false,
     onSubmit: (List<String>) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
@@ -121,7 +122,7 @@ fun VerifyScreen(
             ) {
                 Text(
                     text = if (questions.isEmpty()) {
-                        "Bài đăng này không có câu hỏi xác minh. Bạn có thể gửi yêu cầu liên hệ đến chủ bài."
+                        "Bài đăng này không có câu hỏi xác minh. Bạn có thể gửi yêu cầu liên hệ đến chủ bài. Còn $attemptsLeft lần thử."
                     } else {
                         "Trả lời các câu hỏi của chủ bài. Bạn chỉ nhắn tin được sau khi được duyệt. Còn $attemptsLeft lần thử."
                     },
@@ -148,6 +149,7 @@ fun VerifyScreen(
                     )
 
                     OutlinedTextField(
+                        enabled = !submitting,
                         value = answers[index],
                         onValueChange = {
                             answers[index] = it
@@ -179,7 +181,7 @@ fun VerifyScreen(
                     onClick = {
                         onSubmit(answers.toList())
                     },
-                    enabled = answers.all { it.isNotBlank() },
+                    enabled = !submitting && answers.all { it.isNotBlank() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -190,7 +192,7 @@ fun VerifyScreen(
                     )
                 ) {
                     Text(
-                        text = "Gửi câu trả lời",
+                        text = if (submitting) "Đang gửi…" else "Gửi câu trả lời",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -199,6 +201,7 @@ fun VerifyScreen(
             } else {
 
                 Button(
+                    enabled = !submitting,
                     onClick = {
                         onSubmit(emptyList())
                     },
@@ -211,7 +214,7 @@ fun VerifyScreen(
                     )
                 ) {
                     Text(
-                        text = "Gửi yêu cầu liên hệ",
+                        text = if (submitting) "Đang gửi…" else "Gửi yêu cầu liên hệ",
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )

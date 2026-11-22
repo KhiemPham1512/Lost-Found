@@ -15,16 +15,23 @@ import com.lostfound.app.data.model.Post
 import com.lostfound.app.data.repository.PostRepository
 import com.lostfound.app.ui.components.TopBar
 import com.lostfound.app.ui.components.LoadingView
+import com.lostfound.app.data.repository.OwnClaim
+import com.lostfound.app.data.repository.OwnClaimRepository
+import com.lostfound.app.ui.claims.OwnClaimScreen
+import com.lostfound.app.core.network.ApiException
+import com.lostfound.app.core.util.userMessage
 
 @Composable
 fun VerifyApiScreen(
     postId: String,
     onBack: () -> Unit = {},
-    onSubmitSuccess: (String, String) -> Unit = { _, _ -> }
+    onOpenChat: (String) -> Unit = {}
 ) {
     val repository = remember { VerificationRepository() }
     val scope = rememberCoroutineScope()
     var post by remember(postId) { mutableStateOf<Post?>(null) }
+    var ownClaim by remember(postId) { mutableStateOf<OwnClaim?>(null) }
+    var retryForm by remember(postId) { mutableStateOf(false) }
 
     var response by remember(postId) {
         mutableStateOf<QuestionsResponse?>(null)
@@ -56,6 +63,12 @@ fun VerifyApiScreen(
         post = null
         response = null
         try {
+            ownClaim = OwnClaimRepository.latest(postId)
+            if (ownClaim != null && (!retryForm || !ownClaim!!.canCheckAttempts)) {
+                retryForm = false
+                isLoading = false
+                return@LaunchedEffect
+            }
             post = PostRepository.getPost(postId)
                 ?: throw IllegalStateException("Không xem được bài đăng này")
             repository.getQuestions(postId).fold(
@@ -63,6 +76,7 @@ fun VerifyApiScreen(
                     response = it
                 },
                 onFailure = {
+                    if (it is CancellationException) throw it
                     loadError = it.message ?: "Không tải được câu hỏi"
                 }
             )
@@ -81,6 +95,10 @@ fun VerifyApiScreen(
                 TopBar("Xác minh quyền sở hữu", onBack)
                 LoadingView(message = "Đang tải bài đăng và câu hỏi")
             }
+        }
+
+        ownClaim != null && !retryForm -> {
+            OwnClaimScreen(ownClaim!!, onBack, onRetry = { retryForm = true; retryKey++ }, onOpenChat = onOpenChat)
         }
 
         loadError != null -> {
@@ -102,6 +120,7 @@ fun VerifyApiScreen(
                 TextButton(onClick = onBack) {
                     Text("Quay lại")
                 }
+                if (ownClaim != null) TextButton(onClick = { retryForm = false }) { Text("Xem yêu cầu đã gửi") }
             }
         }
 
@@ -114,10 +133,12 @@ fun VerifyApiScreen(
                 post = post!!,
                 questions = orderedQuestions.map { it.questionText },
                 attemptsLeft = currentResponse.attemptsLeft,
+                submitting = isSubmitting,
                 onBack = onBack,
                 onSubmit = { answerTexts ->
 
                     if (!isSubmitting) {
+                        isSubmitting = true
                         val answers = answerTexts.mapIndexedNotNull {
                                 index, answer ->
                             orderedQuestions.getOrNull(index)?.let { question ->
@@ -129,26 +150,26 @@ fun VerifyApiScreen(
                         }
 
                         scope.launch {
-                            isSubmitting = true
                             submitError = null
-
-                            repository.submitClaim(
-                                postId = postId,
-                                answers = answers
-                            ).fold(
-                                onSuccess = { claim ->
-                                    onSubmitSuccess(
-                                        claim.claimId,
-                                        claim.status
-                                    )
-                                },
-                                onFailure = {
-                                    submitError =
-                                        it.message ?: "Gửi yêu cầu thất bại"
-                                }
-                            )
-
-                            isSubmitting = false
+                            val previous = ownClaim?.id
+                            try {
+                                val sent = OwnClaimRepository.submit(postId, answers)
+                                ownClaim = OwnClaim(sent.claimId, postId, sent.status, post?.title)
+                                retryForm = false
+                            } catch (e: CancellationException) { throw e
+                            } catch (e: Exception) {
+                                submitError = if (e is ApiException && e.status in 400..499) e.userMessage()
+                                    else "Chưa xác nhận được yêu cầu đã gửi. Kiểm tra trạng thái trước khi gửi lại. ${e.userMessage()}"
+                                try {
+                                    val saved = OwnClaimRepository.latest(postId)
+                                    if (saved != null && (saved.id != previous || saved.status in setOf("SUBMITTED", "PASSED"))) {
+                                        ownClaim = saved
+                                        retryForm = false
+                                        submitError = null
+                                    }
+                                } catch (c: CancellationException) { throw c
+                                } catch (_: Exception) { /* Giữ biểu mẫu và lỗi, không tự gửi lại. */ }
+                            } finally { isSubmitting = false }
                         }
                     }
                 }

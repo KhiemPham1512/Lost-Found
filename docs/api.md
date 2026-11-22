@@ -428,6 +428,18 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
+**Android, nhánh `feat/a-android-claim-updates` (chưa merge):** sau phản hồi
+`SUBMITTED`, giữ màn theo dõi yêu cầu thay vì đóng màn. Khi mở lại từ cùng bài,
+đọc yêu cầu mới nhất theo `post_id` + `claimant_id` của phiên hiện tại trước khi
+gọi questions; không dùng lỗi 409 của questions làm dấu hiệu để gửi thêm yêu cầu.
+Theo dõi `claims UPDATE` theo ID thật rồi đọc lại dưới RLS, không suy ra trạng
+thái từ payload. `PASSED` có nút mở hội thoại tra từ claim và claimant thật;
+`COMPLETED` mở lịch sử. `FAILED`/`CANCELLED`/`CLOSED` chỉ cho kiểm tra điều kiện
+bằng GET questions trước khi hiện biểu mẫu mới; API vẫn quyết định bài/lượt còn
+hợp lệ. Việc bị đóng không tự tiêu lượt Fail/Cancel. Trạng thái lạ không cấp hành
+động mới. Gửi claim dùng body một lần, không tự POST lại khi lỗi; đọc lại yêu cầu
+để đối chiếu nếu chưa rõ kết quả. Không đổi endpoint, enum, RLS hoặc schema.
+
 #### `GET /posts/{post_id}/claims` ✅
 Chủ bài lấy danh sách yêu cầu để đọc câu trả lời và duyệt. Áp dụng cho cả
 `FOUND` và `LOST`; bổ sung đường đọc FastAPI cho màn hình duyệt Android,
@@ -822,7 +834,7 @@ Bảng `verification_questions` chỉ **chủ bài** đọc trực tiếp đư�
 | Đánh dấu thông báo đã đọc ("Đọc hết") | Cập nhật `notifications.read_at` |
 | Sửa hồ sơ | Cập nhật `profiles`: chỉ các cột `display_name`, `avatar_url`, `bio` (tối đa 160 ký tự) |
 
-**Android thông báo (nhánh `feat/a-android-notifications`, chưa merge):** đọc riêng
+**Android thông báo (đã merge PR #46, `b217882`):** đọc riêng
 theo `user_id`/RLS,20mục/trang bằng con trỏ `created_at DESC,id DESC`; Mới/Trước đó
 theo `read_at`. Mở mục chỉ đánh dấu ID đó; Đọc hết giới hạn mục chưa đọc của chính
 mình tới khóa sắp xếp mới nhất đã tải (cả các trang cũ), không đánh dấu khóa mới hơn.
@@ -916,7 +928,7 @@ kiểm chứng APK/thiết bị, merge và phát hành phải được ghi riên
 - `notifications` lọc theo `user_id` (chuông thông báo).
 - `claims` (người trả lời biết ngay khi được Pass hoặc bị Fail).
 
-**Android, nhánh `feat/a-android-realtime` (chưa merge):** chat đang mở đăng ký
+**Android đã merge PR #48 (`050d680`):** chat đang mở đăng ký
 `messages INSERT` theo `conversation_id` và `claims UPDATE` theo claim thật để
 đọc lại trạng thái khóa. Màn thông báo đăng ký `INSERT`/`UPDATE` theo `user_id`
 của phiên hiện tại. WebSocket dùng JWT, kiểm tra topic/ID đăng ký/bảng/loại sự kiện
@@ -928,10 +940,19 @@ thành công luôn đọc bù. Giữ nút tải lại và đọc bù 30 giây đ
 Nhãn UI phân biệt trực tiếp với đang kết nối lại.
 
 Màn thông báo đọc lại trang mới nhất khi có sự kiện, cùng hành vi với tải lại
-thủ công. Inbox và màn nộp câu trả lời chưa có đăng ký riêng; không bổ sung push
-FCM/thông báo hệ điều hành khi app đóng. Live đã có publication cho ba bảng trên;
-nhánh không đổi SQL, RLS, Auth, backend hoặc dependency. Kết quả thiết bị/kiểm thử
-và merge/phát hành phải được ghi riêng trong PR/handoff.
+thủ công. PR #48 chưa đăng ký riêng cho inbox/màn gửi câu trả lời; không có push
+FCM/thông báo hệ điều hành khi app đóng. Live đã có publication cho ba bảng trên.
+
+Nhánh `feat/a-android-claim-updates` (chưa merge) bổ sung inbox nghe `messages INSERT`
+và `claims UPDATE` bằng JWT, không lọc ID hội thoại chưa biết. RLS trên server vẫn
+kiểm tra từng dòng và chỉ phát thay đổi người dùng được phép đọc. Client chỉ cho
+phép hai cặp bảng/event này ở chế độ không có filter; thông báo vẫn bắt buộc lọc
+đúng user hiện tại, các subscription theo ID giữ kiểm tra cũ. Mỗi cặp bảng/event
+chỉ có một đăng ký để tránh ghép nhầm ID đăng ký. Event chỉ yêu cầu đọc lại inbox
+qua REST/RLS, không đưa payload vào danh sách. Khi có sự kiện, inbox trở về trang
+mới nhất như tải lại thủ công. Dùng lifecycle/heartbeat/reconnect/đọc bù của PR #48.
+Không đổi SQL, RLS, Auth, backend hoặc dependency. Kết quả thiết bị/kiểm thử và
+merge/phát hành được ghi riêng trong PR/handoff.
 
 ---
 
