@@ -56,6 +56,9 @@ object BackendApi {
     suspend fun readClaims(postId: String, limit: Int, offset: Int): JSONObject =
         send("GET", "/posts/$postId/claims?limit=$limit&offset=$offset")
 
+    suspend fun submitClaim(postId: String, answers: org.json.JSONArray): JSONObject =
+        send("POST", "/posts/$postId/claims", JSONObject().put("answers", answers), oneShot = true)
+
     suspend fun decideClaim(claimId: String, decision: String): JSONObject =
         send("POST", "/claims/$claimId/decision", JSONObject().put("decision", decision), oneShot = true)
 

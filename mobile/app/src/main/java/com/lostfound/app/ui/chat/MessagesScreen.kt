@@ -14,6 +14,9 @@ import com.lostfound.app.data.repository.Conversation
 import com.lostfound.app.ui.components.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import com.lostfound.app.core.supabase.RealtimeFilter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Composable
 fun MessagesScreen(onOpenChat: (String) -> Unit) {
@@ -23,7 +26,8 @@ fun MessagesScreen(onOpenChat: (String) -> Unit) {
     var more by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
-    suspend fun load(next: Int = 0) {
+    val loadMutex = remember { Mutex() }
+    suspend fun load(next: Int = 0) = loadMutex.withLock {
         loading = true
         error = null
         try {
@@ -35,11 +39,13 @@ fun MessagesScreen(onOpenChat: (String) -> Unit) {
         } catch (e: Exception) { error = e.userMessage()
         } finally { loading = false }
     }
-    LaunchedEffect(Unit) { load() }
+    val filters = remember { listOf(RealtimeFilter("messages", "INSERT", ""), RealtimeFilter("claims", "UPDATE", "")) }
+    val connected = rememberRealtimeRefresh(filters) { load() }
     Column(Modifier.fillMaxSize()) {
         TopBar("Tin nhắn") {
             TextButton(onClick = { scope.launch { load() } }, enabled = !loading) { Text("Tải lại") }
         }
+        Text(if (connected) "Cập nhật trực tiếp" else "Đang kết nối lại · Có thể tải lại", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
         when {
             loading && rows.isEmpty() -> LoadingView()
             error != null && rows.isEmpty() -> ErrorView(error!!, { scope.launch { load() } })

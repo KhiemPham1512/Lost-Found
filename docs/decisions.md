@@ -31,6 +31,14 @@ ID thật; đổi phiên hoặc rời màn thì đóng kết nối. Việc này 
 reconnect là trách nhiệm client; phải giữ test giao thức và kiểm tra Storage/
 Realtime thật riêng với test HTTP giả lập. Trạng thái merge/thiết bị ở handoff/PR.
 
+Nhánh claim-updates bổ sung theo dõi yêu cầu riêng của claimant và inbox. Inbox
+chưa biết ID hội thoại mới nên nghe `messages INSERT`/`claims UPDATE` không có
+filter ID nhưng vẫn qua JWT và RLS hiện có; không mở quyền đọc công khai. Chỉ hai
+cặp này được bỏ filter, mỗi cặp một đăng ký. Client chỉ đọc lại REST, không dùng
+payload làm bản ghi. Kiểm tra điều kiện thử lại yêu cầu luôn qua GET questions:
+CLOSED có thể kiểm tra lại nếu bài được mở lại, không tự đồng nhất CLOSED với
+Fail/Cancel hoặc tự cấp thêm lượt. Không đổi mô hình trạng thái hay ngân sách thử.
+
 ### Ảnh chat riêng tư và viewer admin
 
 Ảnh tin nhắn dùng bucket `chat-images` riêng tư, path theo conversation và người

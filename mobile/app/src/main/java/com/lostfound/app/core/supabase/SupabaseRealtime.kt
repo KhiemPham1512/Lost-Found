@@ -26,7 +26,7 @@ enum class RealtimeEvent { REFRESH, DISCONNECTED }
 class SupabaseRealtime(private val sockets: WebSocket.Factory = Http.client) {
     fun changes(filters: List<RealtimeFilter>): Flow<RealtimeEvent> = channelFlow {
         val owner = SessionStore.userId ?: return@channelFlow
-        require(filters.isNotEmpty() && filters.distinct().size == filters.size && filters.all {
+        require(filters.isNotEmpty() && filters.distinctBy { it.table to it.event }.size == filters.size && filters.all {
             val parts = it.filter.split("=eq.", limit = 2)
             val column = when (it.table) {
                 "messages" -> "conversation_id"
@@ -34,9 +34,11 @@ class SupabaseRealtime(private val sockets: WebSocket.Factory = Http.client) {
                 "claims" -> "id"
                 else -> ""
             }
-            it.event in setOf("INSERT", "UPDATE") && column.isNotEmpty() && parts.size == 2 &&
+            // Inbox chưa biết ID hội thoại mới; hai event này vẫn được server kiểm tra RLS từng dòng.
+            val inbox = it.filter.isEmpty() && (it.table == "messages" && it.event == "INSERT" || it.table == "claims" && it.event == "UPDATE")
+            inbox || (it.event in setOf("INSERT", "UPDATE") && column.isNotEmpty() && parts.size == 2 &&
                 parts[0] == column && runCatching { UUID.fromString(parts[1]).toString() == parts[1] }.getOrDefault(false) &&
-                (it.table != "notifications" || parts[1] == owner)
+                (it.table != "notifications" || parts[1] == owner))
         }) { "Bộ lọc realtime không hợp lệ" }
         SessionStore.session.takeWhile { it?.userId == owner }
             // collectLatest chờ tác vụ cuối khi upstream kết thúc; null buộc hủy socket trước đó.
@@ -70,7 +72,9 @@ class SupabaseRealtime(private val sockets: WebSocket.Factory = Http.client) {
         val socket = sockets.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 val changes = JSONArray(filters.map {
-                    JSONObject().put("schema", "public").put("table", it.table).put("event", it.event).put("filter", it.filter)
+                    JSONObject().put("schema", "public").put("table", it.table).put("event", it.event).apply {
+                        if (it.filter.isNotEmpty()) put("filter", it.filter)
+                    }
                 })
                 webSocket.send(frame("phx_join", JSONObject().put("access_token", token)
                     .put("config", JSONObject().put("postgres_changes", changes))))
@@ -138,7 +142,7 @@ class SupabaseRealtime(private val sockets: WebSocket.Factory = Http.client) {
                                     val filter = registered[ids.getLong(i)]
                                     filter != null && data.optString("schema") == "public" &&
                                         data.optString("table") == filter.table && data.optString("type") == filter.event &&
-                                        data.optJSONObject("record")?.optString(filter.filter.substringBefore("=eq.")) == filter.filter.substringAfter("=eq.")
+                                        (filter.filter.isEmpty() || data.optJSONObject("record")?.optString(filter.filter.substringBefore("=eq.")) == filter.filter.substringAfter("=eq."))
                                 }) emit(RealtimeEvent.REFRESH)
                             }
                             "phx_error", "phx_close" -> throw IOException("Realtime channel closed")
