@@ -11,20 +11,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.lostfound.app.DetailScreen
 import com.lostfound.app.core.session.SessionStore
+import com.lostfound.app.core.util.userMessage
 import com.lostfound.app.data.model.Post
 import com.lostfound.app.data.model.ReportTarget
 import com.lostfound.app.data.repository.PostRepository
 import com.lostfound.app.ui.components.EmptyView
+import com.lostfound.app.ui.components.ErrorView
 import com.lostfound.app.ui.components.LoadingView
 import com.lostfound.app.ui.components.TopBar
+import kotlinx.coroutines.CancellationException
 
 /**
  * Tải dữ liệu chi tiết theo postId; chủ bài xem yêu cầu, người khác xác minh
@@ -38,11 +42,21 @@ fun PostDetailRoute(
     onOpenClaims: () -> Unit,
     onReport: (ReportTarget, String, String?) -> Unit
 ) {
-    val state by produceState<Result<Post?>?>(initialValue = null, postId) {
-        value = runCatching { PostRepository.getPost(postId) }
+    var state by remember(postId) { mutableStateOf<Result<Post?>?>(null) }
+    var reload by remember(postId) { mutableIntStateOf(0) }
+    LaunchedEffect(postId, reload) {
+        state = null
+        state = try {
+            Result.success(PostRepository.getPost(postId))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by remember(postId) { mutableStateOf(false) }
     val post = state?.getOrNull()
+    val error = state?.exceptionOrNull()
     val isMine = post != null && post.authorId == SessionStore.userId
 
     Column(Modifier.fillMaxSize()) {
@@ -79,10 +93,13 @@ fun PostDetailRoute(
         Box(Modifier.weight(1f)) {
             when {
                 state == null -> LoadingView()
+                error != null -> ErrorView(
+                    message = error.userMessage(),
+                    onRetry = { reload++ }
+                )
                 post == null -> EmptyView(
                     title = "Không xem được bài đăng",
-                    message = state?.exceptionOrNull()?.message
-                        ?: "Bài đã bị ẩn, bị gỡ hoặc không còn tồn tại."
+                    message = "Bài đã bị ẩn, bị gỡ hoặc không còn tồn tại."
                 )
                 // Màn của C: chủ bài bấm nút chính thì mở danh sách yêu cầu xác minh
                 else -> DetailScreen(
