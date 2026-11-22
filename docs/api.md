@@ -3,7 +3,7 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
-**Android chi tiết bài đăng (nhánh `feat/a-android-recovery`, chưa merge):**
+**Android chi tiết bài đăng (PR #50 đã merge, `48a41b4`):**
 lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;
 kết quả rỗng dưới RLS vẫn là bài không xem được. Tải lại chỉ đọc dữ liệu,
 không gửi lại yêu cầu xác minh. Đổi bài bỏ dữ liệu cũ và hủy lượt tải trước.
