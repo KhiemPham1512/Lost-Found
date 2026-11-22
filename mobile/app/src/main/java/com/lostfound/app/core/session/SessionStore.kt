@@ -115,7 +115,7 @@ object SessionStore {
                 synchronized(this) {
                     if (generation != version) return@withLock null
                     // Chỉ xóa đúng phiên đã gửi refresh, không xóa phiên đăng nhập sau đó.
-                    if (e.status in 400..499) {
+                    if (e.status in 400..499 && e.status != 429) {
                         clear()
                         null
                     } else {

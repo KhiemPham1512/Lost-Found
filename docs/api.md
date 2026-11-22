@@ -240,7 +240,10 @@ Authorization: Bearer <access_token>
 `SessionStore` để giữ phiên và tự làm mới token qua REST. Phản hồi refresh của
 phiên cũ không được lưu, trả token hoặc xóa phiên sau khi logout/đổi tài khoản;
 request cũ nhận kết quả không còn phiên. Nhiều request cùng phiên dùng chung một
-lần refresh; lỗi mạng/`5xx` giữ phiên, phản hồi `4xx` của phiên hiện tại xóa phiên.
+lần refresh; lỗi mạng/`5xx` giữ phiên. Nhánh `feat/a-android-session-reconnect`
+(chưa merge) sửa trường hợp refresh `429`: giữ phiên và trả lỗi tạm thời cho bên
+gọi, không coi giới hạn tần suất là token bị thu hồi. Các `4xx` còn lại của
+phiên hiện tại vẫn xóa phiên. Không tự phát lại thao tác ghi nghiệp vụ.
 File `lostfound_session.xml` được loại khỏi backup Android cũ, cloud backup và
 chuyển dữ liệu sang thiết bị khác. Quy tắc không thu hồi token hoặc xóa bản backup
 đã tồn tại. Bản sửa phiên đã merge vào `develop` qua PR #41; kiểm chứng trên điện
@@ -395,7 +398,7 @@ Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện t�
 
 ### 3.4 Xác minh quyền sở hữu
 
-**Android (nhánh `feat/a-android-draft-recreation`, chưa merge):** câu trả lời
+**Android (PR #51 đã merge, `c3c0127`):** câu trả lời
 chưa gửi được giữ qua cơ chế khôi phục trạng thái màn hình, tách theo tài khoản,
 bài đăng và bộ câu hỏi. Khôi phục không tự gửi yêu cầu hay giữ một thao tác gửi
 đang chạy; màn hình vẫn đọc lại quyền/trạng thái hiện tại từ API. Không cam kết
