@@ -16,6 +16,10 @@ import com.lostfound.app.data.repository.NotificationDestination
 import com.lostfound.app.ui.components.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import com.lostfound.app.core.session.SessionStore
+import com.lostfound.app.core.supabase.RealtimeFilter
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Composable
 fun NotificationsScreen(onBack: () -> Unit, onOpen: (NotificationDestination) -> Unit) {
@@ -27,7 +31,8 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (NotificationDestination) ->
     var error by remember { mutableStateOf<String?>(null) }
     var writing by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
-    suspend fun load(before: NotificationCursor? = null) {
+    val loadMutex = remember { Mutex() }
+    suspend fun load(before: NotificationCursor? = null) = loadMutex.withLock {
         busy = true
         error = null
         try {
@@ -39,8 +44,14 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (NotificationDestination) ->
         } catch (e: Exception) { error = e.userMessage()
         } finally { busy = false }
     }
-    // shortcut: tải khi mở màn hoặc bấm tải lại; dùng Realtime khi cần cập nhật tức thì.
-    LaunchedEffect(Unit) { load() }
+    val uid = SessionStore.userId
+    val filters = remember(uid) {
+        if (uid == null) emptyList() else listOf(
+            RealtimeFilter("notifications", "INSERT", "user_id=eq.$uid"),
+            RealtimeFilter("notifications", "UPDATE", "user_id=eq.$uid")
+        )
+    }
+    val connected = rememberRealtimeRefresh(filters) { load() }
     fun open(notification: AppNotification) {
         if (busy || writing) return
         writing = true
@@ -75,6 +86,7 @@ fun NotificationsScreen(onBack: () -> Unit, onOpen: (NotificationDestination) ->
                 }
             }, enabled = !busy && !writing && rows.isNotEmpty()) { Text("Đọc hết") }
         }
+        Text(if (connected) "Cập nhật trực tiếp" else "Đang kết nối lại · Có thể tải lại", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodySmall)
         TextButton(onClick = { scope.launch { load() } }, enabled = !busy && !writing) { Text("Tải lại") }
         notice?.let { Text(it, Modifier.padding(horizontal = 16.dp)) }
         if (writing) LinearProgressIndicator(Modifier.fillMaxWidth())
