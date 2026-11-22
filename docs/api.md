@@ -3,7 +3,7 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
-**Android chi tiết bài đăng (nhánh `feat/a-android-recovery`, chưa merge):**
+**Android chi tiết bài đăng (PR #50 đã merge, `48a41b4`):**
 lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;
 kết quả rỗng dưới RLS vẫn là bài không xem được. Tải lại chỉ đọc dữ liệu,
 không gửi lại yêu cầu xác minh. Đổi bài bỏ dữ liệu cũ và hủy lượt tải trước.
@@ -394,6 +394,13 @@ và xóa vẫn dựa trên kiểm chứng cục bộ, chưa chạy trong đợt 
 Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện tại không cho phép chuyển (ví dụ bài đã `RESOLVED`).
 
 ### 3.4 Xác minh quyền sở hữu
+
+**Android (nhánh `feat/a-android-draft-recreation`, chưa merge):** câu trả lời
+chưa gửi được giữ qua cơ chế khôi phục trạng thái màn hình, tách theo tài khoản,
+bài đăng và bộ câu hỏi. Khôi phục không tự gửi yêu cầu hay giữ một thao tác gửi
+đang chạy; màn hình vẫn đọc lại quyền/trạng thái hiện tại từ API. Không cam kết
+giữ bản nháp sau force-stop/xóa dữ liệu ứng dụng. Kiểm chứng và trạng thái tích
+hợp/APK được ghi riêng trong PR/handoff; không đổi API hoặc số lượt thử.
 
 > Người **đăng bài** luôn là người đặt câu hỏi và chấm Pass/Fail. Người còn lại (gọi là *claimant*) là người trả lời.
 > Bài **Found**: claimant là người nhận mình là chủ đồ. Bài **Lost**: claimant là người nói đã nhặt được đồ.
