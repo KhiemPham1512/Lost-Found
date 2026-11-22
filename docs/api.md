@@ -898,7 +898,7 @@ Schema/RLS/HTTP đã kiểm tra trên DB test cô lập. Kiểm chứng Storage 
 viên đạt; người ngoài, admin không tham gia, ẩn danh, URL public và upload giả thư
 mục người gửi bị từ chối. Chưa kiểm chứng ký URL admin/viewer hosted.
 
-Android trên nhánh `feat/a-android-chat-images` (chưa merge): Photo Picker một ảnh,
+Android đã merge PR #47 (`fe2f454`): Photo Picker một ảnh,
 xem trước/bỏ ảnh, nén JPEG bằng bộ nén hiện có rồi upload private trước khi ghi
 `messages` loại `IMAGE`. Chỉ hiện tin gửi thành công khi server trả bản ghi;
 không tự gửi lại upload/tin nhắn. Giữ bản nháp và cảnh báo kiểm tra lịch sử khi
