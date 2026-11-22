@@ -6,6 +6,7 @@ import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.core.supabase.SupabaseRest
 import org.json.JSONObject
 import java.time.Instant
+import java.util.UUID
 
 data class Conversation(
     val id: String,
@@ -25,7 +26,8 @@ data class ChatMessage(
     val type: String,
     val content: String?,
     val createdAt: String,
-    val readAt: String?
+    val readAt: String?,
+    val imagePath: String? = null
 )
 
 data class MessageHistory(
@@ -52,7 +54,7 @@ object ChatRepository {
 
     suspend fun messages(id: String, before: Long? = null): List<ChatMessage> = SupabaseRest.select(
         "messages", buildList {
-            add("select" to "id,sender_id,type,content,created_at,read_at")
+            add("select" to "id,sender_id,type,content,created_at,read_at,image_path")
             add("conversation_id" to "eq.$id")
             add("order" to "id.desc")
             add("limit" to "50")
@@ -90,9 +92,34 @@ object ChatRepository {
         ), JSONObject().put("read_at", Instant.now().toString()))
     }
 
+    suspend fun sendImage(id: String, jpeg: ByteArray): ChatMessage {
+        require(jpeg.size in 3..5_242_880 && jpeg[0] == 0xff.toByte() &&
+            jpeg[1] == 0xd8.toByte() && jpeg[2] == 0xff.toByte()) { "Ảnh JPEG phải nhỏ hơn hoặc bằng 5 MiB" }
+        val sender = SessionStore.requireUserId()
+        check(!get(id).locked) { "Hội thoại đã khóa, chỉ được đọc" }
+        val path = "$id/$sender/${UUID.randomUUID()}.jpg"
+        check(SessionStore.requireUserId() == sender) { "Phiên đăng nhập đã thay đổi" }
+        SupabaseRest.uploadChatImage(path, jpeg)
+        check(SessionStore.requireUserId() == sender) { "Phiên đăng nhập đã thay đổi" }
+        // shortcut: bucket không cho DELETE; giữ upload mồ côi và ảnh có thể đã gửi khi mất phản hồi, cần cleanup phía server sau.
+        return message(SupabaseRest.insert("messages", JSONObject()
+            .put("conversation_id", id).put("sender_id", sender).put("type", "IMAGE").put("image_path", path)))
+    }
+
+    suspend fun imageRequest(id: String, image: ChatMessage): okhttp3.Request {
+        val path = image.imagePath.orEmpty()
+        val parts = path.split('/')
+        require(image.type == "IMAGE" && image.senderId != null && path.length <= 200 && parts.size == 3 &&
+            parts[0] == id && parts[1] == image.senderId &&
+            Regex("[A-Za-z0-9_-]{1,80}\\.(jpg|jpeg|png|webp)").matches(parts[2]) &&
+            UUID.fromString(id).toString() == id && UUID.fromString(image.senderId).toString() == image.senderId
+        ) { "Đường dẫn ảnh hội thoại không hợp lệ" }
+        return SupabaseRest.chatImageRequest(path)
+    }
+
     private fun message(row: JSONObject) = ChatMessage(
         row.getLong("id"), row.str("sender_id"), row.getString("type"), row.str("content"),
-        row.getString("created_at"), row.str("read_at")
+        row.getString("created_at"), row.str("read_at"), row.str("image_path")
     )
 
     private fun conversation(row: JSONObject): Conversation {

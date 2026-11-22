@@ -20,7 +20,7 @@ Khi ai đó hỏi "sao lại làm vậy?" thì mở file này. Các dòng dướ
 
 ## Phân công
 
-### Ảnh chat riêng tư và viewer admin (nhánh feature, chưa áp dụng live)
+### Ảnh chat riêng tư và viewer admin
 
 Ảnh tin nhắn dùng bucket `chat-images` riêng tư, path theo conversation và người
 gửi; không dùng bucket ảnh bài đăng công khai. Thành viên upload/đọc theo RLS;
@@ -28,6 +28,13 @@ admin không thuộc chat chỉ lấy link tạm qua FastAPI sau khi có report 
 Mỗi lần cấp link ghi `VIEW_CONVERSATION`, không bổ sung quyền đọc chat từ report
 POST/USER. Đây là contract bổ sung cho `messages.image_path` hiện có, không đổi
 luồng xác minh hay hoàn tất. Chi tiết path, TTL và SQL patch ở `docs/api.md`.
+
+Ngày 22/11/2026, patch Storage đã được duyệt riêng và áp dụng live; kiểm tra hai
+thành viên đọc được ảnh QA, người ngoài/admin không tham gia/ẩn danh/public URL
+bị chặn. Android dùng tải có JWT và tắt cache ảnh trong Coil, không cần cấp link
+admin cho thành viên. Không thêm quyền DELETE để cleanup từ client; upload có
+thể mồ côi khi gửi tin thất bại và cần xử lý phía server riêng. Việc Storage đã
+đạt không xác nhận viewer admin hosted hoặc APK Android đã được phát hành.
 
 ### Đường đọc danh sách yêu cầu cho chủ bài (07/11/2026)
 
