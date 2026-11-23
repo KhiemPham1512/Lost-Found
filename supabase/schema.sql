@@ -16,6 +16,9 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
+-- Client roles consume existing objects; only the database owner installs DDL.
+revoke create on schema public from public, anon, authenticated;
+
 -- 0. EXTENSIONS
 -- ---------------------------------------------------------------------
 create extension if not exists pg_trgm  with schema extensions;
@@ -299,7 +302,7 @@ create index admin_actions_idx     on public.admin_actions (created_at desc);
 
 -- 9.1 updated_at tự cập nhật
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   new.updated_at := now();
   return new;
@@ -338,7 +341,7 @@ create trigger trg_claims_before_insert before insert on public.claims
 
 -- 9.3 Khi cả hai bên đã xác nhận => COMPLETED (chặn lỗi logic từ phía backend)
 create or replace function public.claims_before_update()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = '' as $$
 begin
   if new.status = 'PASSED'
      and new.author_confirmed_at is not null
@@ -499,7 +502,7 @@ $$;
 --     App hiển thị "1.2 km" bằng cách tự tính từ GPS của máy; DB dùng hàm này để SẮP XẾP "Gần nhất".
 create or replace function public.distance_km(
   lat1 double precision, lng1 double precision, lat2 double precision, lng2 double precision
-) returns double precision language sql immutable parallel safe as $$
+) returns double precision language sql immutable parallel safe set search_path = '' as $$
   select 2 * 6371 * asin(sqrt(
     power(sin(radians(lat2 - lat1) / 2), 2) +
     cos(radians(lat1)) * cos(radians(lat2)) * power(sin(radians(lng2 - lng1) / 2), 2)))

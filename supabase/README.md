@@ -1,19 +1,56 @@
 # Database operations
 
+## Public schema hardening (not applied to live)
+
+`patches/20261123_public_schema_hardening.sql` is the existing-project upgrade;
+`schema.sql` includes the same settings for new projects. Run the patch as the
+database owner inside a transaction after reviewing the live definitions of
+`set_updated_at()`, `claims_before_update()` and `distance_km(float8,float8,float8,float8)`.
+Their bodies must still use only trigger records and built-in operations, since
+the patch pins their search path to an empty string. It preserves their bodies,
+owners, invoker/definer mode and EXECUTE grants.
+
+The patch revokes CREATE on schema `public` from PUBLIC, `anon` and
+`authenticated`. It preserves existing USAGE and table/RLS permissions, so
+creating a post, claim or message through the application is unaffected. The
+database owner can still install objects. No rows, indexes, buckets, Auth
+settings or RLS policies are changed. Applying the patch twice is safe; merging
+the source does not apply it to the hosted database.
+
+After deployment, verify `has_schema_privilege('anon','public','CREATE')` and the
+same check for `authenticated` are false, all three functions have an empty
+configured search path, and normal application reads/writes still work. Re-run
+security advisors; the three mutable-search-path findings should be gone.
+
+The November 23 read-only review also found EXECUTE advisories on four trigger
+functions and `is_admin()`. Trigger functions cannot be called as ordinary
+functions; `is_admin()` checks the current `auth.uid()` and is used by RLS.
+This patch deliberately leaves their execution permissions unchanged. These
+findings are not proof of a privilege bypass, nor is this a complete security
+audit. Leaked-password protection is disabled; Supabase makes that feature
+available on [Pro and above](https://supabase.com/docs/guides/auth/password-security).
+It requires a separate Auth/plan decision. Performance findings (12 uncovered
+foreign keys, 13 per-row Auth/RLS expressions and three unused indexes) remain
+separate measured optimization work; do not drop indexes based only on low use.
+
+## Chat image storage
+
 The reported-chat image feature adds a **private** chat-images bucket. For an
 existing project apply patches/20261111_private_chat_images.sql as owner inside
 a transaction before using the new admin image endpoint. It does not delete or
 move existing data or change post-images. Verify that the chat-images bucket
 has public=false, a 5 MiB limit and JPEG/PNG/WebP MIME
 types. The patch preserves configuration if the bucket name already exists.
-The API fails closed if that bucket is absent/public. This patch is not yet
-applied to the live project in the current feature branch.
+The API fails closed if that bucket is absent/public. This storage patch was
+approved separately and applied to the live project on November 22, 2026;
+actual private-member upload/read checks are recorded in the API handoff.
 
 Authenticated active members may upload only into their own sender folder in
 an unlocked conversation, and read the conversation's history after locking.
 Nonmember admins obtain temporary image access only through audited FastAPI.
 No UPDATE/DELETE policy is added. Path and client integration contract are in
-docs/api.md; tests validate policies locally, not real Storage uploads yet.
+docs/api.md. Policy tests run locally; actual member uploads/private reads and
+locked-history access were also verified against live Storage on November 22.
 
 For a new project, run `schema.sql`. Existing projects run the two migrations in
 `migrations/` in timestamp order, then `install_cron.sql` as the database owner.

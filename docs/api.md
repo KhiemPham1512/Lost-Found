@@ -3,6 +3,13 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
+**Database hardening (nhánh `feat/a-supabase-advisor-triage`, chưa merge/chưa áp dụng live):**
+bỏ quyền tạo đối tượng SQL trong schema `public` của client và cố định search path
+của ba helper cập nhật thời gian/khoảng cách. Quyền đọc/ghi dữ liệu của ứng dụng,
+RLS, thân hàm và Auth settings không đổi. `schema.sql` dành cho dự án mới; dự án
+đang có dữ liệu dùng `supabase/patches/20261123_public_schema_hardening.sql` sau
+khi duyệt riêng việc áp dụng SQL. Merge PR không tự thay đổi Supabase live.
+
 **Android chi tiết bài đăng (PR #50 đã merge, `48a41b4`):**
 lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;
 kết quả rỗng dưới RLS vẫn là bài không xem được. Tải lại chỉ đọc dữ liệu,
@@ -240,8 +247,8 @@ Authorization: Bearer <access_token>
 `SessionStore` để giữ phiên và tự làm mới token qua REST. Phản hồi refresh của
 phiên cũ không được lưu, trả token hoặc xóa phiên sau khi logout/đổi tài khoản;
 request cũ nhận kết quả không còn phiên. Nhiều request cùng phiên dùng chung một
-lần refresh; lỗi mạng/`5xx` giữ phiên. Nhánh `feat/a-android-session-reconnect`
-(chưa merge) sửa trường hợp refresh `429`: giữ phiên và trả lỗi tạm thời cho bên
+lần refresh; lỗi mạng/`5xx` giữ phiên. PR #52 (đã merge, `acb2f83`) sửa trường hợp
+refresh `429`: giữ phiên và trả lỗi tạm thời cho bên
 gọi, không coi giới hạn tần suất là token bị thu hồi. Các `4xx` còn lại của
 phiên hiện tại vẫn xóa phiên. Không tự phát lại thao tác ghi nghiệp vụ.
 File `lostfound_session.xml` được loại khỏi backup Android cũ, cloud backup và
