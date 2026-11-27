@@ -401,8 +401,10 @@ Lỗi: `400` đường dẫn ảnh sai, ảnh của người khác, hoặc ảnh
 
 #### `PATCH /posts/{post_id}/status` ✅
 Chủ bài ẩn, hiện lại hoặc xóa bài của mình.
-Đã kiểm tra live chuyển `ACTIVE` → `ARCHIVED` trên bài QA có ảnh; nhánh hiện lại
-và xóa vẫn dựa trên kiểm chứng cục bộ, chưa chạy trong đợt Storage QA.
+Đã kiểm tra live chuyển `ACTIVE` → `ARCHIVED` trên bài QA có ảnh. Ngày 27/11/2026,
+Android trên điện thoại USB đã ẩn → hiện lại → ẩn một bài QA mới không ảnh, đối
+chiếu trạng thái server sau mỗi bước; cuối lượt giữ bài `ARCHIVED`. Xóa vẫn dựa
+trên kiểm chứng cục bộ, chưa thao tác xóa trên dữ liệu live trong lượt này.
 ```json
 { "status": "ARCHIVED" }
 ```
