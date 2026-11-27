@@ -57,6 +57,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.lostfound.app.core.network.ApiException
 import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.core.util.Formatters
 import com.lostfound.app.core.util.Validators
@@ -243,6 +244,7 @@ private fun MenuRow(icon: ImageVector, label: String, onClick: () -> Unit, dange
 
 data class EditProfileState(
     val loading: Boolean = true,
+    val loaded: Boolean = false,
     val username: String = "",
     val displayName: String = "",
     val bio: String = "",
@@ -261,22 +263,29 @@ class EditProfileViewModel : ViewModel() {
     private val _state = MutableStateFlow(EditProfileState())
     val state = _state.asStateFlow()
 
-    init {
+    init { load() }
+
+    fun load() {
+        _state.update { it.copy(loading = true, loaded = false, error = null) }
         viewModelScope.launch {
             try {
                 val p = ProfileRepository.myProfile()
-                val phone = runCatching { ProfileRepository.myPhone() }.getOrNull().orEmpty()
+                    ?: throw ApiException(404, "Tài khoản chưa có hồ sơ")
+                val phone = ProfileRepository.myPhone().orEmpty()
                 _state.update {
                     it.copy(
                         loading = false,
-                        username = p?.username.orEmpty(),
-                        displayName = p?.displayName.orEmpty(),
-                        bio = p?.bio.orEmpty(),
-                        avatarUrl = p?.avatarUrl,
+                        loaded = true,
+                        username = p.username,
+                        displayName = p.displayName.orEmpty(),
+                        bio = p.bio.orEmpty(),
+                        avatarUrl = p.avatarUrl,
                         phone = phone,
                         originalPhone = phone
                     )
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _state.update { it.copy(loading = false, error = e.userMessage()) }
             }
@@ -290,6 +299,7 @@ class EditProfileViewModel : ViewModel() {
 
     fun save(context: android.content.Context) {
         val s = _state.value
+        if (!s.loaded || s.saving) return
         val nameError = if (s.displayName.trim().length > 50) "Tên hiển thị tối đa 50 ký tự" else null
         val phoneChanged = Validators.normalizePhone(s.phone) != Validators.normalizePhone(s.originalPhone)
         val phoneError = when {
@@ -337,6 +347,10 @@ fun EditProfileScreen(onBack: () -> Unit, vm: EditProfileViewModel = viewModel()
         TopBar(title = "Chỉnh sửa hồ sơ", onBack = onBack)
         if (s.loading) {
             LoadingView()
+            return@Column
+        }
+        if (!s.loaded) {
+            ErrorView(s.error ?: "Không tải được hồ sơ", vm::load)
             return@Column
         }
         Column(

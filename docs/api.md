@@ -339,6 +339,14 @@ Lưu số điện thoại (không công khai, chỉ chính chủ và admin xem �
 ```
 Lỗi: `422` sai định dạng · `403` tài khoản bị khóa hoặc chưa có hồ sơ · `503` backend chưa cấu hình database.
 
+**Android, nhánh `feat/a-android-profile-load-retry` (chưa merge):** màn sửa hồ sơ
+chỉ cho nhập và lưu sau khi tải thành công cả hồ sơ công khai của chính mình và
+số điện thoại riêng tư. Lỗi tải hoặc không còn hồ sơ hiện màn lỗi có nút Thử lại;
+không coi lỗi tải số điện thoại là số trống. Phản hồi thành công không có số vẫn
+cho chỉnh sửa. Thử lại chỉ đọc dữ liệu, không tự lưu. Lỗi khi lưu giữ dữ liệu đang
+nhập và không báo thành công; cập nhật hồ sơ và số điện thoại vẫn là hai request
+riêng, có thể thành công một phần. Không đổi endpoint, quyền hay quy tắc số điện thoại.
+
 ### 3.3 Bài đăng
 
 #### `POST /posts` ✅
