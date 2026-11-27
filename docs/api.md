@@ -339,7 +339,7 @@ Lưu số điện thoại (không công khai, chỉ chính chủ và admin xem �
 ```
 Lỗi: `422` sai định dạng · `403` tài khoản bị khóa hoặc chưa có hồ sơ · `503` backend chưa cấu hình database.
 
-**Android, nhánh `feat/a-android-profile-load-retry` (chưa merge):** màn sửa hồ sơ
+**Android (PR #55 đã merge, `f17e566`):** màn sửa hồ sơ
 chỉ cho nhập và lưu sau khi tải thành công cả hồ sơ công khai của chính mình và
 số điện thoại riêng tư. Lỗi tải hoặc không còn hồ sơ hiện màn lỗi có nút Thử lại;
 không coi lỗi tải số điện thoại là số trống. Phản hồi thành công không có số vẫn
@@ -417,6 +417,13 @@ và xóa vẫn dựa trên kiểm chứng cục bộ, chưa chạy trong đợt 
 { "id": "9b1d...", "status": "ARCHIVED" }
 ```
 Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện tại không cho phép chuyển (ví dụ bài đã `RESOLVED`).
+
+**Android, nhánh `feat/a-android-own-post-lifecycle` (chưa merge):** sau khi đổi
+trạng thái thành công, màn Bài của bạn tải lại tab đang xem và hủy lượt tải danh
+sách cũ. Nếu chuyển sang Đã ẩn trong lúc request Ẩn đang chờ phản hồi, bài vừa ẩn
+vẫn nằm đúng tab; chiều hiện lại cũng tương tự. Nếu tải lại lỗi, nút Thử lại chỉ
+đọc danh sách, không gửi lại thao tác đổi trạng thái. Không đổi luật chuyển trạng
+thái hoặc endpoint.
 
 ### 3.4 Xác minh quyền sở hữu
 
