@@ -231,7 +231,7 @@ class SentReportsViewModel : ViewModel() {
     }
 
     fun load(pullToRefresh: Boolean = false) {
-        _state.update { it.copy(loading = !pullToRefresh && it.items.isEmpty(), refreshing = pullToRefresh, error = null) }
+        _state.update { it.copy(loading = !pullToRefresh, refreshing = pullToRefresh, error = null) }
         viewModelScope.launch {
             try {
                 val items = ReportRepository.mySentReports()
@@ -261,7 +261,7 @@ fun SentReportsScreen(
         ) {
             when {
                 s.loading -> LoadingView()
-                s.error != null && s.items.isEmpty() -> ErrorView(s.error ?: "", onRetry = { vm.load() })
+                s.error != null -> ErrorView(s.error ?: "", onRetry = { vm.load() })
                 s.items.isEmpty() -> LazyColumn(Modifier.fillMaxSize()) {
                     item {
                         EmptyView(

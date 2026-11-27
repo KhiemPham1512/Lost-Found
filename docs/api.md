@@ -625,6 +625,12 @@ Quy tắc:
 - Báo cáo mới về cùng đối tượng bị từ chối khi báo cáo cũ của bạn còn `PENDING` hoặc `REVIEWING`.
 - Mỗi người **tối đa 10 báo cáo trong 24 giờ**.
 
+**Android, nhánh `feat/a-android-report-feedback` (chưa merge):** màn Báo cáo đã
+gửi hiện lỗi và nút Thử lại cả khi đã có danh sách cũ. Khi thử lại, màn hình chờ
+đọc xong trước khi hiển thị kết quả; không coi trạng thái đã lưu trên màn hình là
+kết quả tải lại thành công. Thao tác này chỉ đọc, không tạo hay xử lý báo cáo.
+Không đổi endpoint, trạng thái hoặc quyền xem báo cáo.
+
 Lỗi: `400` báo cáo chính mình hoặc bài của chính mình · `404` không tìm thấy đối tượng (hoặc cuộc trò chuyện không thuộc bạn) · `409` đã có báo cáo đang chờ về đối tượng này · `422` `reason` hoặc `target_type` không hợp lệ · `429` quá 10 báo cáo trong 24 giờ.
 
 ### 3.7 Quản trị (chỉ tài khoản `ADMIN`, dùng bởi Admin web)
