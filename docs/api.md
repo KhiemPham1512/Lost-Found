@@ -3,12 +3,19 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
-**Database hardening (nhánh `feat/a-supabase-advisor-triage`, chưa merge/chưa áp dụng live):**
+**Database hardening (PR #53 đã merge và áp dụng live ngày 23/11/2026):**
 bỏ quyền tạo đối tượng SQL trong schema `public` của client và cố định search path
 của ba helper cập nhật thời gian/khoảng cách. Quyền đọc/ghi dữ liệu của ứng dụng,
 RLS, thân hàm và Auth settings không đổi. `schema.sql` dành cho dự án mới; dự án
 đang có dữ liệu dùng `supabase/patches/20261123_public_schema_hardening.sql` sau
-khi duyệt riêng việc áp dụng SQL. Merge PR không tự thay đổi Supabase live.
+khi duyệt riêng việc áp dụng SQL. Live đã xác nhận quyền/hàm/RLS và chat thực tế;
+cron hết hạn cũng chạy thành công sau patch. Merge PR không tự thay đổi SQL live.
+
+**Quyền helper trigger (nhánh `feat/a-supabase-hardening-followup`, chưa merge/chưa áp dụng live):**
+thu hồi quyền EXECUTE trực tiếp của PUBLIC/anon/authenticated trên bốn helper
+trigger nội bộ claim/tin nhắn. Trigger đã được cài bởi owner vẫn xử lý các luồng
+nghiệp vụ; không đổi thân hàm, RLS, dữ liệu hoặc quyền gọi `is_admin()`. Dự án cũ
+dùng `supabase/patches/20261123_private_trigger_functions.sql` sau khi duyệt riêng.
 
 **Android chi tiết bài đăng (PR #50 đã merge, `48a41b4`):**
 lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;

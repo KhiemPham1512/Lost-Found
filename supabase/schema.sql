@@ -338,6 +338,7 @@ end $$;
 
 create trigger trg_claims_before_insert before insert on public.claims
   for each row execute function public.claims_before_insert();
+revoke execute on function public.claims_before_insert() from public, anon, authenticated;
 
 -- 9.3 Khi cả hai bên đã xác nhận => COMPLETED (chặn lỗi logic từ phía backend)
 create or replace function public.claims_before_update()
@@ -384,6 +385,7 @@ end $$;
 
 create trigger trg_claims_after_insert after insert on public.claims
   for each row execute function public.claims_after_insert();
+revoke execute on function public.claims_after_insert() from public, anon, authenticated;
 
 -- 9.4c Phản ứng khi claim thay đổi:
 --     PASSED     -> tự tạo conversation + tin nhắn hệ thống + thông báo cho claimant
@@ -477,6 +479,7 @@ end $$;
 -- (khi cả hai xác nhận) mà câu UPDATE gốc không có cột status => trigger kiểu "of status" sẽ không chạy.
 create trigger trg_claims_after_status after update on public.claims
   for each row execute function public.claims_after_status_change();
+revoke execute on function public.claims_after_status_change() from public, anon, authenticated;
 
 -- 9.5 Cập nhật last_message_at
 create or replace function public.messages_after_insert()
@@ -488,6 +491,7 @@ end $$;
 
 create trigger trg_messages_after_insert after insert on public.messages
   for each row execute function public.messages_after_insert();
+revoke execute on function public.messages_after_insert() from public, anon, authenticated;
 
 -- 9.6 is_admin(): dùng trong RLS (SECURITY DEFINER để không bị RLS của profiles chặn vòng lặp)
 create or replace function public.is_admin()
