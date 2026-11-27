@@ -1,6 +1,13 @@
 # Database operations
 
-## Public schema hardening (not applied to live)
+## Public schema hardening (applied to live)
+
+PR #53 merged and the separately approved patch was applied on November 23,
+2026 as `public_schema_hardening` (`20261123063736`). Live checks confirmed
+client CREATE is denied, USAGE/RLS/EXECUTE and function bodies are preserved,
+the three search-path advisories are gone, and normal member chat still works.
+Scheduled expiration also succeeded after deployment, including the three
+latest runs checked on November 27 (11:00, 12:00 and 13:00 UTC).
 
 `patches/20261123_public_schema_hardening.sql` is the existing-project upgrade;
 `schema.sql` includes the same settings for new projects. Run the patch as the
@@ -32,6 +39,27 @@ available on [Pro and above](https://supabase.com/docs/guides/auth/password-secu
 It requires a separate Auth/plan decision. Performance findings (12 uncovered
 foreign keys, 13 per-row Auth/RLS expressions and three unused indexes) remain
 separate measured optimization work; do not drop indexes based only on low use.
+
+## Private trigger helpers (not applied to live)
+
+`patches/20261123_private_trigger_functions.sql` removes direct EXECUTE from
+PUBLIC, `anon` and `authenticated` for the four internal claim/message trigger
+helpers. The same restrictions are included in `schema.sql` after the owner
+installs each canonical trigger. Review and apply this separate patch as owner
+inside a transaction; the approval for PR #53 does not cover it.
+
+The patch does not recreate triggers or change their functions, data or RLS.
+Existing triggers continue handling claim notifications, conversations, message
+timestamps and handover completion. Explicit owner/service-role grants remain.
+`is_admin()` remains available for its existing RLS callers and checks the
+current user's role. Client roles do not need direct access to internal helpers
+for normal application operations. See PostgreSQL's
+[trigger permission requirements](https://www.postgresql.org/docs/17/sql-createtrigger.html).
+
+After deployment, verify direct EXECUTE is false for both client roles on all
+four helpers, normal workflows still succeed and the corresponding eight
+definer-EXECUTE advisory records are gone. This does not resolve the separate
+`is_admin` advisories, leaked-password plan decision or performance notices.
 
 ## Chat image storage
 
