@@ -106,7 +106,8 @@ class MyPostsViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 PostRepository.changeStatus(post.id, status)
-                _state.update { s -> s.copy(busyPostId = null, posts = s.posts.filterNot { it.id == post.id }) }
+                _state.update { it.copy(busyPostId = null) }
+                load()
                 _messages.emit(
                     when (status) {
                         "ARCHIVED" -> "Đã ẩn bài. Xem lại ở tab Đã ẩn."
