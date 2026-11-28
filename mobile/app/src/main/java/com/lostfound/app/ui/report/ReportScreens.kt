@@ -39,10 +39,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lostfound.app.core.network.ApiException
+import com.lostfound.app.core.session.SessionStore
 import com.lostfound.app.core.util.Formatters
 import com.lostfound.app.core.util.userMessage
 import com.lostfound.app.data.model.ReportReason
@@ -82,19 +84,30 @@ data class ReportFormState(
     val sentCode: String? = null
 )
 
-class ReportViewModel : ViewModel() {
-    private val _state = MutableStateFlow(ReportFormState())
+class ReportViewModel(private val savedState: SavedStateHandle) : ViewModel() {
+    private val _state = MutableStateFlow(ReportFormState(
+        reason = ReportReason.fromCode(savedState["reason"]),
+        description = savedState["description"] ?: "",
+        submissionUncertain = savedState["submissionUncertain"] ?: false,
+        sentCode = savedState["sentCode"]
+    ))
     val state = _state.asStateFlow()
     private var initialized = false
 
     fun init(reason: ReportReason?) {
         if (initialized) return
         initialized = true
-        if (reason != null) _state.update { it.copy(reason = reason) }
+        if (_state.value.reason == null && reason != null) setReason(reason)
     }
 
-    fun setReason(r: ReportReason) = _state.update { it.copy(reason = r, reasonError = null, error = null) }
-    fun setDescription(v: String) = _state.update { it.copy(description = v, error = null) }
+    fun setReason(r: ReportReason) {
+        savedState["reason"] = r.code
+        _state.update { it.copy(reason = r, reasonError = null, error = null) }
+    }
+    fun setDescription(v: String) {
+        savedState["description"] = v
+        _state.update { it.copy(description = v, error = null) }
+    }
 
     fun send(target: ReportTarget, targetId: String) {
         val s = _state.value
@@ -106,12 +119,18 @@ class ReportViewModel : ViewModel() {
             _state.update { it.copy(error = "Vui lòng mô tả vấn đề khi chọn lý do Khác") }
             return
         }
+        // A restored request may have reached the server even if no response survived.
+        savedState["submissionUncertain"] = true
         _state.update { it.copy(sending = true, error = null, submissionUncertain = false) }
         viewModelScope.launch {
             try {
-                val code = ReportRepository.send(target, targetId, reason, s.description)
-                _state.update { it.copy(sending = false, sentCode = code.ifBlank { "đã gửi" }) }
+                val code = ReportRepository.send(target, targetId, reason, s.description).ifBlank { "đã gửi" }
+                savedState["sentCode"] = code
+                savedState["submissionUncertain"] = false
+                _state.update { it.copy(sending = false, sentCode = code) }
             } catch (e: ApiException) {
+                val uncertain = e.status == 0 || e.status == 408 || e.status in 500..599
+                savedState["submissionUncertain"] = uncertain
                 val msg = when (e.status) {
                     409 -> "Bạn đã báo cáo mục này và báo cáo vẫn đang chờ xử lý."
                     429 -> "Bạn đã gửi tối đa 10 báo cáo trong 24 giờ. Vui lòng thử lại sau."
@@ -121,7 +140,7 @@ class ReportViewModel : ViewModel() {
                     it.copy(
                         sending = false,
                         error = msg,
-                        submissionUncertain = e.status == 0 || e.status == 408 || e.status in 500..599
+                        submissionUncertain = uncertain
                     )
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -141,10 +160,10 @@ fun ReportScreen(
     targetTitle: String?,
     onBack: () -> Unit,
     onOpenSentReports: () -> Unit,
-    vm: ReportViewModel = viewModel()
+    vm: ReportViewModel = viewModel(key = "report:${SessionStore.userId}:${target.code}:$targetId")
 ) {
     val s by vm.state.collectAsState()
-    LaunchedEffect(Unit) { vm.init(initialReason) }
+    LaunchedEffect(vm) { vm.init(initialReason) }
 
     Column(Modifier.fillMaxSize()) {
         TopBar(title = "Báo cáo ${target.label}", onBack = onBack)

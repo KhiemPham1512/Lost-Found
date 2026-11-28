@@ -427,7 +427,7 @@ vẫn nằm đúng tab; chiều hiện lại cũng tương tự. Nếu tải l�
 đọc danh sách, không gửi lại thao tác đổi trạng thái. Không đổi luật chuyển trạng
 thái hoặc endpoint.
 
-**Android, nhánh `feat/a-android-large-text-actions` (chưa merge):** nhóm tab và
+**Android (PR #59 đã merge, `c0104b6`):** nhóm tab và
 các nút quản lý bài tự xuống dòng khi thiếu chỗ; nút thao tác giữ vùng chạm tối
 thiểu 48dp, không ép nội dung vào hàng cao cố định. Nút chính dùng chung của các
 form giữ chiều cao tối thiểu 52dp và tăng theo nội dung. Đã tái hiện chữ bị cắt
@@ -646,6 +646,15 @@ gửi thành công và có nút Xem báo cáo đã gửi để kiểm tra trư�
 chưa rõ, không phải trạng thái báo cáo mới. Client không tự gửi lại; nút kiểm tra
 chỉ mở danh sách để đọc. Không thêm idempotency phía server hay khóa việc người
 dùng chủ động gửi lại; vẫn cần đối chiếu bản ghi và tuân thủ giới hạn hiện có.
+
+**Android, nhánh `feat/a-android-report-draft-state` (chưa merge):** form báo cáo
+giữ lý do và nội dung qua saved state của Android, tách theo tài khoản, loại đối
+tượng và ID. Khôi phục với ViewModel mới không tự gửi request hoặc giữ nút gửi
+ở trạng thái đang chạy. Nếu request chưa có kết quả chắc chắn, form giữ cảnh báo
+và nút Xem báo cáo đã gửi; nếu đã nhận phản hồi thành công, giữ mã đã nhận.
+Không đổi endpoint, trạng thái báo cáo, giới hạn hay quyền. Không cam kết giữ
+bản nháp sau force-stop/xóa dữ liệu; kiểm tra saved state với ViewModel mới
+không thay thế kiểm chứng Android thực sự hủy tiến trình khi thiếu bộ nhớ.
 
 **Kiểm chứng ngày 27/11/2026:** Android trên điện thoại USB đã gửi một báo cáo QA
 bài đăng, mở danh sách với trạng thái `PENDING`, kéo tải lại sau khi API admin xử lý
