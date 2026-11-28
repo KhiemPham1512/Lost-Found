@@ -3,11 +3,11 @@ package com.lostfound.app.ui.myposts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -145,9 +145,10 @@ fun MyPostsScreen(
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp)
             )
-            Row(
+            FlowRow(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MyPostsTab.entries.forEach { tab ->
                     ChoiceChip(tab.label, s.tab == tab) { vm.setTab(tab) }
@@ -257,14 +258,14 @@ private fun MyPostFooter(
         // Hành động
         val canReactivate = post.status == "ARCHIVED" &&
             (Formatters.parse(post.expiresAt)?.isAfter(OffsetDateTime.now()) ?: true)
-        Row(
-            modifier = Modifier.fillMaxWidth().height(36.dp),
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             if (busy) {
                 Text("Đang xử lý…", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
-                return@Row
+                return@FlowRow
             }
             if (post.status == "ACTIVE") {
                 TextButton(onClick = onClaims) { Text("Yêu cầu") }

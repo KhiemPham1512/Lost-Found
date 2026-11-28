@@ -427,6 +427,13 @@ vẫn nằm đúng tab; chiều hiện lại cũng tương tự. Nếu tải l�
 đọc danh sách, không gửi lại thao tác đổi trạng thái. Không đổi luật chuyển trạng
 thái hoặc endpoint.
 
+**Android, nhánh `feat/a-android-large-text-actions` (chưa merge):** nhóm tab và
+các nút quản lý bài tự xuống dòng khi thiếu chỗ; nút thao tác giữ vùng chạm tối
+thiểu 48dp, không ép nội dung vào hàng cao cố định. Nút chính dùng chung của các
+form giữ chiều cao tối thiểu 52dp và tăng theo nội dung. Đã tái hiện chữ bị cắt
+ở font 200%/rộng 360dp bằng giao diện thật với HTTP fixture; không đổi cỡ chữ hệ
+thống, điều kiện hành động, endpoint hay trạng thái nghiệp vụ.
+
 ### 3.4 Xác minh quyền sở hữu
 
 **Android (PR #51 đã merge, `c3c0127`):** câu trả lời
@@ -631,7 +638,7 @@ gửi hiện lỗi và nút Thử lại cả khi đã có danh sách cũ. Khi th
 kết quả tải lại thành công. Thao tác này chỉ đọc, không tạo hay xử lý báo cáo.
 Không đổi endpoint, trạng thái hoặc quyền xem báo cáo.
 
-**Android, nhánh `feat/a-android-report-submit-safety` (chưa merge):** request tạo
+**Android (PR #58 đã merge, `a5639eb`):** request tạo
 báo cáo dùng body one-shot như các thao tác xác minh/trao trả. Khi gặp lỗi mạng,
 `408`, `5xx` hoặc không đọc được phản hồi, form giữ lý do/nội dung, không báo đã
 gửi thành công và có nút Xem báo cáo đã gửi để kiểm tra trước khi gửi lại. Lỗi
