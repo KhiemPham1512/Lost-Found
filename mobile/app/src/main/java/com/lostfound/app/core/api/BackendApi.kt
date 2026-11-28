@@ -82,6 +82,6 @@ object BackendApi {
             .put("target_id", targetId)
             .put("reason", reason)
         if (!description.isNullOrBlank()) body.put("description", description.trim())
-        return send("POST", "/reports", body)
+        return send("POST", "/reports", body, oneShot = true)
     }
 }
