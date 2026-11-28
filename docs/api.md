@@ -3,6 +3,10 @@
 > 🧪 = đã triển khai và kiểm thử cục bộ; chưa xác nhận phiên bản trên Render.
 > Các mục ✅ đã có trước đợt bổ sung này giữ nguyên trạng thái được ghi nhận.
 
+Trạng thái tích hợp, APK và phạm vi kiểm chứng được tách riêng trong
+[bảng kiểm chứng ngày 28/11/2026](readiness.md); merge không tự phát hành Android
+hoặc áp dụng SQL lên dự án đang chạy.
+
 **Database hardening (PR #53 đã merge và áp dụng live ngày 23/11/2026):**
 bỏ quyền tạo đối tượng SQL trong schema `public` của client và cố định search path
 của ba helper cập nhật thời gian/khoảng cách. Quyền đọc/ghi dữ liệu của ứng dụng,
@@ -11,11 +15,14 @@ RLS, thân hàm và Auth settings không đổi. `schema.sql` dành cho dự án
 khi duyệt riêng việc áp dụng SQL. Live đã xác nhận quyền/hàm/RLS và chat thực tế;
 cron hết hạn cũng chạy thành công sau patch. Merge PR không tự thay đổi SQL live.
 
-**Quyền helper trigger (nhánh `feat/a-supabase-hardening-followup`, chưa merge/chưa áp dụng live):**
+**Quyền helper trigger (PR #54 đã merge, `f57cbc8`; áp dụng live ngày 27/11/2026):**
 thu hồi quyền EXECUTE trực tiếp của PUBLIC/anon/authenticated trên bốn helper
 trigger nội bộ claim/tin nhắn. Trigger đã được cài bởi owner vẫn xử lý các luồng
 nghiệp vụ; không đổi thân hàm, RLS, dữ liệu hoặc quyền gọi `is_admin()`. Dự án cũ
 dùng `supabase/patches/20261123_private_trigger_functions.sql` sau khi duyệt riêng.
+Patch live được ghi nhận bằng migration `20261127131521`. Lần cron `expire-posts`
+tự nhiên lúc 14:00 UTC ngày 27/11 chạy thành công sau patch; kết quả này xác nhận
+job chạy được, không chứng minh đã có bài đủ điều kiện thực sự chuyển hết hạn.
 
 **Android chi tiết bài đăng (PR #50 đã merge, `48a41b4`):**
 lỗi đọc qua Supabase hiển thị lỗi và nút “Thử lại” ngay tại màn chi tiết;
@@ -483,7 +490,7 @@ Lỗi: `403` bài của chính bạn · `404` không có bài · `409` bạn đ�
 
 Hệ thống **tự gửi thông báo** cho chủ bài.
 
-**Android, nhánh `feat/a-android-claim-updates` (chưa merge):** sau phản hồi
+**Android (PR #49 đã merge, `a3b5769`):** sau phản hồi
 `SUBMITTED`, giữ màn theo dõi yêu cầu thay vì đóng màn. Khi mở lại từ cùng bài,
 đọc yêu cầu mới nhất theo `post_id` + `claimant_id` của phiên hiện tại trước khi
 gọi questions; không dùng lỗi 409 của questions làm dấu hiệu để gửi thêm yêu cầu.
@@ -647,14 +654,17 @@ chưa rõ, không phải trạng thái báo cáo mới. Client không tự gửi
 chỉ mở danh sách để đọc. Không thêm idempotency phía server hay khóa việc người
 dùng chủ động gửi lại; vẫn cần đối chiếu bản ghi và tuân thủ giới hạn hiện có.
 
-**Android, nhánh `feat/a-android-report-draft-state` (chưa merge):** form báo cáo
+**Android (PR #60 đã merge, `faedf61`):** form báo cáo
 giữ lý do và nội dung qua saved state của Android, tách theo tài khoản, loại đối
 tượng và ID. Khôi phục với ViewModel mới không tự gửi request hoặc giữ nút gửi
 ở trạng thái đang chạy. Nếu request chưa có kết quả chắc chắn, form giữ cảnh báo
 và nút Xem báo cáo đã gửi; nếu đã nhận phản hồi thành công, giữ mã đã nhận.
 Không đổi endpoint, trạng thái báo cáo, giới hạn hay quyền. Không cam kết giữ
-bản nháp sau force-stop/xóa dữ liệu; kiểm tra saved state với ViewModel mới
-không thay thế kiểm chứng Android thực sự hủy tiến trình khi thiếu bộ nhớ.
+bản nháp sau force-stop/xóa dữ liệu. Ngày 28/11/2026, điện thoại Xiaomi đã khôi
+phục đúng form, lý do và nội dung chưa gửi sau khi đưa app về nền, dừng tiến trình
+bằng ADB và chọn lại task cũ trong Đa nhiệm; đã xác nhận PID cũ mất và PID mới
+khác. Không tạo báo cáo thật trong ca này. Các kết quả request ở trên được kiểm
+tra bằng HTTP fixture; chưa mô phỏng áp lực bộ nhớ tự nhiên hoặc mọi thiết bị.
 
 **Kiểm chứng ngày 27/11/2026:** Android trên điện thoại USB đã gửi một báo cáo QA
 bài đăng, mở danh sách với trạng thái `PENDING`, kéo tải lại sau khi API admin xử lý
@@ -1029,7 +1039,7 @@ Màn thông báo đọc lại trang mới nhất khi có sự kiện, cùng hàn
 thủ công. PR #48 chưa đăng ký riêng cho inbox/màn gửi câu trả lời; không có push
 FCM/thông báo hệ điều hành khi app đóng. Live đã có publication cho ba bảng trên.
 
-Nhánh `feat/a-android-claim-updates` (chưa merge) bổ sung inbox nghe `messages INSERT`
+PR #49 (đã merge, `a3b5769`) bổ sung inbox nghe `messages INSERT`
 và `claims UPDATE` bằng JWT, không lọc ID hội thoại chưa biết. RLS trên server vẫn
 kiểm tra từng dòng và chỉ phát thay đổi người dùng được phép đọc. Client chỉ cho
 phép hai cặp bảng/event này ở chế độ không có filter; thông báo vẫn bắt buộc lọc

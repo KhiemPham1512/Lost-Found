@@ -31,13 +31,27 @@ ID thật; đổi phiên hoặc rời màn thì đóng kết nối. Việc này 
 reconnect là trách nhiệm client; phải giữ test giao thức và kiểm tra Storage/
 Realtime thật riêng với test HTTP giả lập. Trạng thái merge/thiết bị ở handoff/PR.
 
-Nhánh claim-updates bổ sung theo dõi yêu cầu riêng của claimant và inbox. Inbox
+PR #49 (đã merge, `a3b5769`) bổ sung theo dõi yêu cầu riêng của claimant và inbox. Inbox
 chưa biết ID hội thoại mới nên nghe `messages INSERT`/`claims UPDATE` không có
 filter ID nhưng vẫn qua JWT và RLS hiện có; không mở quyền đọc công khai. Chỉ hai
 cặp này được bỏ filter, mỗi cặp một đăng ký. Client chỉ đọc lại REST, không dùng
 payload làm bản ghi. Kiểm tra điều kiện thử lại yêu cầu luôn qua GET questions:
 CLOSED có thể kiểm tra lại nếu bài được mở lại, không tự đồng nhất CLOSED với
 Fail/Cancel hoặc tự cấp thêm lượt. Không đổi mô hình trạng thái hay ngân sách thử.
+
+### Khôi phục bản nháp xác minh và báo cáo
+
+PR #51 giữ câu trả lời xác minh qua saved state, tách theo tài khoản, bài đăng và
+bộ câu hỏi. PR #60 dùng SavedStateHandle cho form báo cáo, với ViewModel tách theo
+tài khoản, loại đối tượng và ID. Lý do đã khôi phục được ưu tiên hơn lý do gợi ý
+từ route; ViewModel của đối tượng mới vẫn được khởi tạo riêng.
+
+Khôi phục form báo cáo không tự gửi nghiệp vụ hoặc giữ trạng thái đang gửi.
+Request chưa có kết quả chắc chắn hiện lời nhắc kiểm tra Báo cáo đã gửi; phản hồi
+thành công đã nhận giữ đúng mã. Đây là trạng thái UI, không thêm trạng thái báo
+cáo hay idempotency server. Không cam kết giữ draft sau force-stop/xóa dữ liệu.
+Phân biệt kiểm tra saved state với ViewModel mới, khôi phục task sau khi dừng
+tiến trình nền và áp lực bộ nhớ tự nhiên; kết quả từng loại ở [readiness](readiness.md).
 
 ### Ảnh chat riêng tư và viewer admin
 
