@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -178,7 +179,7 @@ fun PrimaryButton(
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
-        modifier = modifier.fillMaxWidth().height(52.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(containerColor = containerColor)
     ) {
