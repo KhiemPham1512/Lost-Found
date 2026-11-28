@@ -420,7 +420,7 @@ trên kiểm chứng cục bộ, chưa thao tác xóa trên dữ liệu live tro
 ```
 Lỗi: `403` không phải chủ bài · `404` · `409` trạng thái hiện tại không cho phép chuyển (ví dụ bài đã `RESOLVED`).
 
-**Android, nhánh `feat/a-android-own-post-lifecycle` (chưa merge):** sau khi đổi
+**Android (PR #56 đã merge, `7aaedb4`):** sau khi đổi
 trạng thái thành công, màn Bài của bạn tải lại tab đang xem và hủy lượt tải danh
 sách cũ. Nếu chuyển sang Đã ẩn trong lúc request Ẩn đang chờ phản hồi, bài vừa ẩn
 vẫn nằm đúng tab; chiều hiện lại cũng tương tự. Nếu tải lại lỗi, nút Thử lại chỉ
@@ -624,6 +624,19 @@ Quy tắc:
 - Báo cáo `CONVERSATION` chỉ làm được với cuộc trò chuyện **bạn là một trong hai người**.
 - Báo cáo mới về cùng đối tượng bị từ chối khi báo cáo cũ của bạn còn `PENDING` hoặc `REVIEWING`.
 - Mỗi người **tối đa 10 báo cáo trong 24 giờ**.
+
+**Android, nhánh `feat/a-android-report-feedback` (chưa merge):** màn Báo cáo đã
+gửi hiện lỗi và nút Thử lại cả khi đã có danh sách cũ. Khi thử lại, màn hình chờ
+đọc xong trước khi hiển thị kết quả; không coi trạng thái đã lưu trên màn hình là
+kết quả tải lại thành công. Thao tác này chỉ đọc, không tạo hay xử lý báo cáo.
+Không đổi endpoint, trạng thái hoặc quyền xem báo cáo.
+
+**Kiểm chứng ngày 27/11/2026:** Android trên điện thoại USB đã gửi một báo cáo QA
+bài đăng, mở danh sách với trạng thái `PENDING`, kéo tải lại sau khi API admin xử lý
+`DISMISS` và thấy đúng `DISMISSED`/“Không vi phạm”. Mở thông báo `REPORT_UPDATED`
+đưa về danh sách và đánh dấu đúng thông báo đã đọc. Chỉ dùng bài/báo cáo QA mới;
+không xác nhận giao diện admin hosted hoặc các hành động gỡ bài/khóa tài khoản.
+Lỗi tải lại và phản hồi chậm được kiểm tra bằng HTTP giả lập trên máy thật.
 
 Lỗi: `400` báo cáo chính mình hoặc bài của chính mình · `404` không tìm thấy đối tượng (hoặc cuộc trò chuyện không thuộc bạn) · `409` đã có báo cáo đang chờ về đối tượng này · `422` `reason` hoặc `target_type` không hợp lệ · `429` quá 10 báo cáo trong 24 giờ.
 
