@@ -625,11 +625,20 @@ Quy tắc:
 - Báo cáo mới về cùng đối tượng bị từ chối khi báo cáo cũ của bạn còn `PENDING` hoặc `REVIEWING`.
 - Mỗi người **tối đa 10 báo cáo trong 24 giờ**.
 
-**Android, nhánh `feat/a-android-report-feedback` (chưa merge):** màn Báo cáo đã
+**Android (PR #57 đã merge, `113935c`):** màn Báo cáo đã
 gửi hiện lỗi và nút Thử lại cả khi đã có danh sách cũ. Khi thử lại, màn hình chờ
 đọc xong trước khi hiển thị kết quả; không coi trạng thái đã lưu trên màn hình là
 kết quả tải lại thành công. Thao tác này chỉ đọc, không tạo hay xử lý báo cáo.
 Không đổi endpoint, trạng thái hoặc quyền xem báo cáo.
+
+**Android, nhánh `feat/a-android-report-submit-safety` (chưa merge):** request tạo
+báo cáo dùng body one-shot như các thao tác xác minh/trao trả. Khi gặp lỗi mạng,
+`408`, `5xx` hoặc không đọc được phản hồi, form giữ lý do/nội dung, không báo đã
+gửi thành công và có nút Xem báo cáo đã gửi để kiểm tra trước khi gửi lại. Lỗi
+`409`/`422`/`429` vẫn giữ cách báo lỗi hiện hành. Đây là tình huống kết quả request
+chưa rõ, không phải trạng thái báo cáo mới. Client không tự gửi lại; nút kiểm tra
+chỉ mở danh sách để đọc. Không thêm idempotency phía server hay khóa việc người
+dùng chủ động gửi lại; vẫn cần đối chiếu bản ghi và tuân thủ giới hạn hiện có.
 
 **Kiểm chứng ngày 27/11/2026:** Android trên điện thoại USB đã gửi một báo cáo QA
 bài đăng, mở danh sách với trạng thái `PENDING`, kéo tải lại sau khi API admin xử lý

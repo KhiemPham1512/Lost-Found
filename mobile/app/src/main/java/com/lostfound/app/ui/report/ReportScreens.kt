@@ -78,6 +78,7 @@ data class ReportFormState(
     val reasonError: String? = null,
     val error: String? = null,
     val sending: Boolean = false,
+    val submissionUncertain: Boolean = false,
     val sentCode: String? = null
 )
 
@@ -105,7 +106,7 @@ class ReportViewModel : ViewModel() {
             _state.update { it.copy(error = "Vui lòng mô tả vấn đề khi chọn lý do Khác") }
             return
         }
-        _state.update { it.copy(sending = true, error = null) }
+        _state.update { it.copy(sending = true, error = null, submissionUncertain = false) }
         viewModelScope.launch {
             try {
                 val code = ReportRepository.send(target, targetId, reason, s.description)
@@ -116,9 +117,17 @@ class ReportViewModel : ViewModel() {
                     429 -> "Bạn đã gửi tối đa 10 báo cáo trong 24 giờ. Vui lòng thử lại sau."
                     else -> e.userMessage()
                 }
-                _state.update { it.copy(sending = false, error = msg) }
+                _state.update {
+                    it.copy(
+                        sending = false,
+                        error = msg,
+                        submissionUncertain = e.status == 0 || e.status == 408 || e.status in 500..599
+                    )
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _state.update { it.copy(sending = false, error = e.userMessage()) }
+                _state.update { it.copy(sending = false, error = e.userMessage(), submissionUncertain = true) }
             }
         }
     }
@@ -190,6 +199,10 @@ fun ReportScreen(
                 maxLength = 1000
             )
             FormError(s.error)
+            if (s.submissionUncertain) {
+                Text("Chưa rõ báo cáo đã gửi hay chưa. Hãy kiểm tra trước khi gửi lại.", color = TextSecondary)
+                TextButton(onClick = onOpenSentReports) { Text("Xem báo cáo đã gửi") }
+            }
             PrimaryButton(
                 text = "Gửi báo cáo",
                 onClick = { vm.send(target, targetId) },
